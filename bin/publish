@@ -61,6 +61,7 @@ object ${dslName}Build extends Build {
   val virtualization_lms_core = "EPFL" % "lms_2.10" % "0.3-SNAPSHOT"
   val delite_framework = "stanford-ppl" % "framework_2.10" % "0.1-SNAPSHOT"
   val delite_runtime = "stanford-ppl" % "runtime_2.10" % "0.1-SNAPSHOT"
+  val forge_project = "Stanford_PPL" % "forge_2.10" % "0.1"
 
   val virtScala = "2.10.2-RC1"
   val virtBuildSettingsBase = Project.defaultSettings ++ Seq(
@@ -91,7 +92,7 @@ object ${dslName}Build extends Build {
   lazy val ${dslName}Shared = Project("${dslName}-shared", file("shared"), settings = virtBuildSettings)
   lazy val ${dslName}Comp = Project("${dslName}-comp", file("compiler"), settings = virtBuildSettings) dependsOn(${dslName}Shared)
   lazy val ${dslName}Lib = Project("${dslName}-lib", file("library"), settings = virtBuildSettings) dependsOn(${dslName}Shared)
-  lazy val ${dslName}Ident = Project("${dslName}-ident", file("ident"), settings = virtBuildSettings) dependsOn(${dslName}Shared)
+  lazy val ${dslName}Ident = Project("${dslName}-ident", file("ident"), settings = virtBuildSettings ++ Seq(libraryDependencies += forge_project)) dependsOn(${dslName}Shared)
   lazy val ${dslName}Apps = Project("${dslName}-apps", file("apps"), settings = virtBuildSettings) dependsOn(${dslName}Comp, ${dslName}Lib, ${dslName}Ident)
 }
 """)
