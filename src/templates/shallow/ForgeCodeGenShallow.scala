@@ -10,7 +10,7 @@ import scala.virtualization.lms.internal.{GenericFatCodegen, GenericCodegen}
 
 import core._
 
-trait ForgeCodeGenShallow extends ForgeCodeGenBackend with ShallowGenOps with ShallowGenImports {
+trait ForgeCodeGenShallow extends ForgeCodeGenBackend with ShallowGenOps with ShallowGenImports with ShallowGenTypeClasses {
   val IR: ForgeApplicationRunner with ForgeExp
   import IR._
 
@@ -21,7 +21,7 @@ trait ForgeCodeGenShallow extends ForgeCodeGenBackend with ShallowGenOps with Sh
     Directory(Path(dslDir)).createDirectory()
     // emitDSLDefinition()
     emitOps()
-    // emitTypeClasses()
+    emitTypeClasses()
     // emitOverloadHack()
   }
 
@@ -41,9 +41,10 @@ trait ForgeCodeGenShallow extends ForgeCodeGenBackend with ShallowGenOps with Sh
   def emitHeader(pkgName: String, stream: PrintWriter) {
     stream.println("package " + pkgName)
     stream.println()
-    emitScalaReflectImports(stream)
+    // emitScalaReflectImports(stream)
     // emitLMSImports(stream)
     // emitDSLImports(stream)
+    emitAllImports(stream)
     stream.println()
   }
 
@@ -75,17 +76,17 @@ trait ForgeCodeGenShallow extends ForgeCodeGenBackend with ShallowGenOps with Sh
     // }
   }
 
-  // def emitTypeClasses() {
-  //   val typeClassDir = dslDir + File.separator + "typeclass"
-  //   Directory(Path(typeClassDir)).createDirectory()
+  def emitTypeClasses() {
+    val typeClassDir = dslDir + File.separator + "typeclass"
+    Directory(Path(typeClassDir)).createDirectory()
 
-  //   for ((grp,ops) <- OpsGrp if isTpeClass(grp)) {
-  //     val stream = new PrintWriter(new FileWriter(typeClassDir+File.separator+grp.name+"Ops"+".scala"))
-  //     emitHeader(packageName + ".typeclass", stream)
-  //     emitTpeClass(grp, ops, stream)
-  //     stream.close()
-  //   }
-  // }
+    for ((grp,ops) <- OpsGrp if isTpeClass(grp)) {
+      val stream = new PrintWriter(new FileWriter(typeClassDir+File.separator+grp.name+"Ops"+".scala"))
+      emitHeader(packageName + ".typeclass", stream)
+      emitTpeClass(grp, ops, stream)
+      stream.close()
+    }
+  }
 
   // def emitOverloadHack() {
   //   val stream = new PrintWriter(new FileWriter(dslDir+"GenOverloadHack"+".scala"))

@@ -9,19 +9,31 @@ trait ShallowGenImports extends ForgeCodeGenBase {
   val IR: ForgeApplicationRunner with ForgeExp
   import IR._
 
-  def emitScalaIOImports(stream: PrintWriter) {
-    stream.println("import java.io.{BufferedWriter, FileWriter, PrintWriter}")
+  def emitForgeLibraryImports(stream: PrintWriter) {
+    stream.println("import ch.epfl.lamp.autolifter.library._")
+    stream.println("import ForgeArray._")
+    stream.println("import ForgeArrayBuffer._")
+    stream.println("import Numeric._")
   }
+
+  def emitScalaMathImports(stream: PrintWriter) {
+    stream.println("import scala.math.Ordering.Implicits._")
+    stream.println("import scala.math.Numeric.Implicits._")
+  }
+
+  // def emitScalaIOImports(stream: PrintWriter) {
+  //   stream.println("import java.io.{BufferedWriter, FileWriter, PrintWriter}")
+  // }
 
   def emitScalaReflectImports(stream: PrintWriter) {
     stream.println("import scala.tools.nsc.io._")
     stream.println("import scala.reflect.{Manifest,SourceContext}")
   }
 
-  def emitScalaImports(stream: PrintWriter) {
-    emitScalaIOImports(stream)
-    emitScalaReflectImports(stream)
-  }
+  // def emitScalaImports(stream: PrintWriter) {
+  //   emitScalaIOImports(stream)
+  //   emitScalaReflectImports(stream)
+  // }
 
   // def emitLMSImports(stream: PrintWriter) {
   //   stream.println("import scala.virtualization.lms.common.{Base,BaseExp,EffectExp,BaseFatExp}")
@@ -41,8 +53,10 @@ trait ShallowGenImports extends ForgeCodeGenBase {
   // }
 
   def emitAllImports(stream: PrintWriter) {
-    emitScalaImports(stream)
+    // emitScalaImports(stream)
     // emitLMSImports(stream)
     // emitDSLImports(stream)
+    emitScalaMathImports(stream)
+    emitForgeLibraryImports(stream)
   }
 }

@@ -45,6 +45,14 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     b
   }
 
+  override def makeTpeParsWithBounds(args: List[Rep[TypePar]]): String = {
+    // def ctxBounds(a: Rep[TypePar]) = a.ctxBounds.map(_.name).filter(_ != "Manifest")
+    def ctxBounds(a: Rep[TypePar]) = a.ctxBounds.map(_.name)
+    if (args.length < 1) return ""
+    val args2 = args.map { a => quote(a) + (if (!ctxBounds(a).isEmpty) ":" + ctxBounds(a).mkString(":") else "") }
+    "[" + args2.mkString(",") + "]"
+  }
+
   def replaceWildcards(s: String) = {
     var o = s
     o = s.replaceAll(qu, "\"")
@@ -161,6 +169,12 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     else {
       "(" + args.map(makeArgName).mkString(",") + ")"
     }
+  }
+
+  override def argify(a: Exp[DSLArg], typify: Exp[DSLType] => String = repify): String = a match {
+    case Def(Arg(name, tpe@Def(FTpe(args,ret,freq)), Some(d))) => name + ": " + typify(tpe) + " = " + escape(d)
+    case Def(Arg(name, tpe, Some(d))) => name + ": " + typify(tpe) + " = " + escape(d)
+    case Def(Arg(name, tpe, None)) => name + ": " + typify(tpe)
   }
 
   def makeArgsWithType(args: List[Rep[DSLArg]], typify: Rep[DSLType] => String = repify, addParen: Boolean = true) = makeArgs(args, t => argify(t, typify), addParen)
@@ -384,9 +398,10 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
 
   def emitImpl(o: Rep[DSLOp], stream: PrintWriter) {
     val indent = 2
+    // val ret = typifySome(o.retTpe)
     // emitWithIndent("{", stream, indent)
     def tpeParser(prod: Product): String = 
-      makeTpePars(prod.productIterator.toList.asInstanceOf[List[Rep[DSLType]]].filter(isTpePar).asInstanceOf[List[Rep[TypePar]]])
+      makeTpePars(prod.productIterator.toList.asInstanceOf[List[Rep[DSLType]]].filter(isTpePar).:+(o.retTpe).asInstanceOf[List[Rep[TypePar]]])
     def emitFunc(func: Rep[String]) {
       inline(o, func, quoteLiteral).split(nl).toList match {
         case List(line) => stream.print(line)
@@ -528,8 +543,6 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     else {
       // default infix mode (slightly easier to understand what's happening, also fails to apply less than implicits)
       // blacklist or curried args or function args (in the latter two cases, infix doesn't always resolve correctly)
-      // SHALLOW
-      // noInfixList.contains(o.name) || o.curriedArgs.length > 0 || hasFuncArgs(o)
       noInfixList.contains(o.name) || o.curriedArgs.length > 0 || hasFuncArgs(o) || o.args.size > 0
     }
   }
@@ -557,160 +570,38 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     //   stream.println()
     // }
 
-    // val base = if (implicitOps.length > 0) opsGrp.name + "Base" else baseOpsCls(opsGrp.grp)
-    // stream.println("trait " + opsGrp.name + " extends " + base + " {")
-    // stream.println("  this: " + dsl + " => ")
-    // stream.println()
-
     // static ops
-    // val staticOps = opsGrp.ops.filter(e=>e.style==staticMethod)
-    val staticOps = opsGrp.ops.filter(e=>e.style==staticMethod || e.style==directMethod)
+    val staticOps = opsGrp.ops.filter(e=>e.style==staticMethod || e.style==directMethod || e.style == compilerMethod)
     val objects = staticOps.groupBy(_.grp.name)
     for ((name, ops) <- objects) {
       stream.println("object " + name + " {")
       for (o <- ops) {
         // stream.println("  " + makeSyntaxMethod(o))
-        stream.print("  " + makeSyntaxMethod(o))
+        if (o.style == compilerMethod)
+          // stream.print("  " + makeOpMethodSignature(o, withReturnTpe = Some(true)) + " = " )
+          stream.print("  " + makeSyntaxMethod(o, "protected def "))
+        else
+          stream.print("  " + makeSyntaxMethod(o))
         emitImpl(o, stream)
       }
       stream.println("}")
       stream.println()
     }
 
-    // TODO merge staticOps and compilerOps
-
-
-    val compilerOps = opsGrp.ops.filter(e=>e.style == compilerMethod)
-    val helpers = compilerOps.groupBy(_.grp.name) 
-    for ((name, ops) <- helpers) {
-      if (!ops.isEmpty) {
-        stream.println("object " + name + "Helper {")
-        if (unique(ops).length != ops.length) err("non-unique compiler op variants (e.g. Var, T args) are not yet supported")
-        for (o <- ops) {
-          stream.print("  " + makeOpMethodSignature(o, withReturnTpe = Some(true)) + " = " )
-          emitImpl(o, stream)
-        }
-      }
-      stream.println("}")
-      stream.println()
-    }
-
-    // direct ops
-    // val directOps = opsGrp.ops.filter(e=>e.style==directMethod)
-    // for (o <- directOps) {
-    //   stream.println("  " + makeSyntaxMethod(o))
-    // }
-    // if (directOps.length > 0) {
-    //   stream.println()
-    // }
-
     // infix ops
     val allInfixOps = opsGrp.ops.filter(e=>e.style==infixMethod)
-
-    /*
-    // SHALLOW
-    val (pimpOps, infixOps) = allInfixOps.partition(noInfix)
-    // val pimpOps = allInfixOps
-    if (pimpOps.nonEmpty) {
-      // set up a pimp-my-library style promotion
-      val ops = pimpOps.filterNot(o => getHkTpe(o.args.apply(0).tpe).name == "Var" ||
-                                       (o.args.apply(0).tpe.stage == now && pimpOps.exists(o2 => o.args.apply(0).tpe.name == o2.args.apply(0).tpe.name && o2.args.apply(0).tpe.stage == future)))
-      val tpes = ops.map(_.args.apply(0).tpe).distinct
-      for (tpe <- tpes) {
-        val tpePars = tpe match {
-          case Def(TpeInst(_,args)) => args.filter(isTpePar).asInstanceOf[List[Rep[TypePar]]]
-          case Def(TpePar(_,_,_)) => List(tpe.asInstanceOf[Rep[TypePar]])
-          case _ => tpe.tpePars
-        }
-        val tpeArgs = tpe match {
-          case Def(TpeInst(hk,args)) => args.filterNot(isTpePar)
-          case _ => Nil
-        }
-
-        // SHALLOW
-        // val opsClsName = opsGrp.grp.name + tpe.name + tpeArgs.map(_.name).mkString("") + "OpsCls"
-        val opsClsName = opsGrp.grp.name + tpeArgs.map(_.name).mkString("")
-        val helpClsName = opsGrp.grp.name + "Helper"
-
-        // if (tpe.stage == compile) {
-        //   stream.println("  implicit def liftTo" + opsClsName + makeTpeParsWithBounds(tpePars) + "(x: " + repify(tpe) + ") = new " + opsClsName + "(x)")
-        // }
-        // else {
-        //   stream.println("  implicit def repTo" + opsClsName + makeTpeParsWithBounds(tpePars) + "(x: " + repify(tpe) + ") = new " + opsClsName + "(x)")
-        //   if (pimpOps.exists(o => quote(o.args.apply(0).tpe) == quote(tpe) && o.args.apply(0).tpe.stage == now)) {
-        //     stream.println("  implicit def liftTo" + opsClsName + makeTpeParsWithBounds(tpePars) + "(x: " + quote(tpe) + ") = new " + opsClsName + "(unit(x))")
-        //   }
-        //   // we provide the Var conversion even if no lhs var is declared, since it is essentially a chained implicit with readVar
-        //   if (Tpes.exists(t => getHkTpe(t).name == "Var")) {
-        //     stream.println("  implicit def varTo" + opsClsName + makeTpeParsWithBounds(tpePars) + "(x: " + varify(tpe) + ") = new " + opsClsName + "(readVar(x))")
-        //   }
-        // }
-
-        stream.println()
-        // stream.println("class " + opsClsName + makeTpeParsWithBounds(tpePars) + "(val self: " + repify(tpe) + ") {")
-        val fields = DataStructs.get(tpe)
-        val fieldsString = fields map (makeFieldArgs) getOrElse ""
-        stream.println("class " + opsClsName + makeTpeParsWithBounds(tpePars) + "(" + fieldsString + ") { self => ")
-        stream.println("  import " + helpClsName + "._")
-
-        def emitOp(o: Rep[DSLOp], prefix: String = "def") {
-          val otherArgs = makeArgsWithNowType(o.firstArgs.drop(1))
-          val curriedArgs = o.curriedArgs.map(a => makeArgsWithNowType(a)).mkString("")
-          val hkTpePars = if (isTpePar(tpe)) tpePars else getHkTpe(tpe).tpePars
-          val otherTpePars = o.tpePars.filterNot(p => hkTpePars.map(_.name).contains(p.name))
-          // val ret = if (Config.fastCompile) ": " + repifySome(o.retTpe) else ""
-          val ret = ": " + typifySome(o.retTpe)
-          stream.print("  " + prefix + " " + o.name + makeTpeParsWithBounds(otherTpePars) + otherArgs + curriedArgs
-            // + (makeImplicitArgsWithCtxBoundsWithType(implicitArgsWithOverload(o), o.tpePars diff otherTpePars, without = hkTpePars)) + ret + " = " + makeOpMethodNameWithFutureArgs(o, a => if (a.name ==  o.args.apply(0).name) "self" else simpleArgName(a)))
-            + (makeImplicitArgsWithCtxBoundsWithType(implicitArgsWithOverload(o) diff (arg("__pos",MSourceContext)), o.tpePars diff otherTpePars, without = hkTpePars)) + ret + " = ")
-          emitImpl(o, stream)
-        }
-
-        for (o <- ops if quote(o.args.apply(0).tpe) == quote(tpe)) {
-          // val otherArgs = makeArgsWithNowType(o.firstArgs.drop(1))
-          // val curriedArgs = o.curriedArgs.map(a => makeArgsWithNowType(a)).mkString("")
-          // val hkTpePars = if (isTpePar(tpe)) tpePars else getHkTpe(tpe).tpePars
-          // val otherTpePars = o.tpePars.filterNot(p => hkTpePars.map(_.name).contains(p.name))
-          // // val ret = if (Config.fastCompile) ": " + repifySome(o.retTpe) else ""
-          // val ret = ": " + typifySome(o.retTpe)
-          // stream.print("  def " + o.name + makeTpeParsWithBounds(otherTpePars) + otherArgs + curriedArgs
-          //   // + (makeImplicitArgsWithCtxBoundsWithType(implicitArgsWithOverload(o), o.tpePars diff otherTpePars, without = hkTpePars)) + ret + " = " + makeOpMethodNameWithFutureArgs(o, a => if (a.name ==  o.args.apply(0).name) "self" else simpleArgName(a)))
-          //   + (makeImplicitArgsWithCtxBoundsWithType(implicitArgsWithOverload(o) diff (arg("__pos",MSourceContext)), o.tpePars diff otherTpePars, without = hkTpePars)) + ret + " = ")
-          // emitImpl(o, stream)
-          emitOp(o)
-        }
-        stream.println("}")
-        // stream.println()
-        // stream.println("object " + helpClsName + " {")
-
-        // val compilerOps = opsGrp.ops.filter(e=>e.style == compilerMethod)
-        // if (!compilerOps.isEmpty) {
-        //   if (unique(compilerOps).length != compilerOps.length) err("non-unique compiler op variants (e.g. Var, T args) are not yet supported")
-        //   for (o <- compilerOps) {
-        //     // if (Impls(o).isInstanceOf[Redirect]) {
-        //       // stream.println("  " + makeOpMethodSignature(o) + " = " + makeOpMethodNameWithFutureArgs(o, a => if (a.name ==  o.args.apply(0).name) "self" else simpleArgName(a)))
-        //     stream.print("  " + makeOpMethodSignature(o, withReturnTpe = Some(true)) + " = " )
-        //     emitImpl(o, stream)
-        //     // }
-        //     // else {
-        //     //   stream.println("  " + makeOpMethodSignature(o, withReturnTpe = Some(true)))
-        //     // }
-        //     // emitOp(o, "private def")
-        //   }
-        // }
-        // stream.println("}")
-        // stream.println()
-      }
-      stream.println()
-    }
-    */
-
+    
     val pimpOps = allInfixOps filter (_.args.length > 0)
     // val pimpOps = allInfixOps
     if (pimpOps.nonEmpty) {
       // set up a pimp-my-library style promotion
-      val ops = pimpOps.filterNot(o => getHkTpe(o.args.apply(0).tpe).name == "Var" ||
-                                       (o.args.apply(0).tpe.stage == now && pimpOps.exists(o2 => o.args.apply(0).tpe.name == o2.args.apply(0).tpe.name && o2.args.apply(0).tpe.stage == future)))
+      // val ops = pimpOps.filterNot(o => getHkTpe(o.args.apply(0).tpe).name == "Var" ||
+      //                                  (o.args.apply(0).tpe.stage == now && pimpOps.exists(o2 => o.args.apply(0).tpe.name == o2.args.apply(0).tpe.name && o2.args.apply(0).tpe.stage == future)))
+      val ops = pimpOps filterNot { op =>
+        op.args exists { arg =>
+          getHkTpe(arg.tpe).name == "Var"
+        }
+      }
       val tpes = ops.map(_.args.apply(0).tpe).distinct
       def isTpePure(t: Rep[DSLType]): Boolean = t match {
         case Def(Tpe(_, _, _)) => true
@@ -721,7 +612,14 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
         case Def(TpeInst(t1,_)) => getTpeName(t1)
         case _ => quote(t)
       }
-      val fTpes = tpes.filter(t => isTpePure(t) || {
+
+      def getTpePars(tpe: Rep[DSLType]): List[Rep[TypePar]] = tpe match {
+        case Def(TpeInst(_,args)) => args.filter(isTpePar).asInstanceOf[List[Rep[TypePar]]]
+        case Def(TpePar(_,_,_)) => List(tpe.asInstanceOf[Rep[TypePar]])
+        case _ => tpe.tpePars
+      }
+      // first line filters out specialized types
+      val fTpes = tpes.filter(t => { isTpePure(t) /*&& !getTpePars(t).exists(a => isTpePar(a) && List("Int", "Float", "Double").contains(asTpePar(a).name) ) */} || {
         isTpeInst(t) && (t match {case Def(TpeInst(_, args)) => args.forall(a => isTpePar(a) && asTpePar(a).name != "_")})
         })
       // for (tpe <- tpes) {
@@ -737,13 +635,14 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
         }
 
         // val opsClsName = opsGrp.grp.name + tpeArgs.map(_.name).mkString("")
-        val opsClsName = quote(tpe)
-        val helpClsName = opsGrp.grp.name + "Helper"
+        val opsClsName = tpe.name + makeTpeParsWithBounds(tpe.tpePars)
+        val helpClsName = opsGrp.grp.name
 
         stream.println()
         val fields = DataStructs.get(tpe)
         val fieldsString = fields map (makeFieldArgs) getOrElse ""
-        stream.println("class " + opsClsName + makeTpeParsWithBounds(tpePars) + "(" + fieldsString + ") { self => ")
+        stream.println("class " + opsClsName + "(" + fieldsString + ") { self => ")
+        stream.println(fields map makeFieldsWithInitArgs getOrElse "")
         stream.println("  import " + helpClsName + "._")
 
         def emitOp(o: Rep[DSLOp], prefix: String = "def") {
@@ -765,35 +664,5 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
       stream.println()
     }
 
-    // for (o <- infixOps) {
-    //   stream.println(makeSyntaxMethod(o, prefix = "  def infix_"))
-    // }
-    // stream.println()
-
-    // // abstract methods
-    // for (o <- unique(opsGrp.ops.filter(e=>e.style != compilerMethod && e.style != implicitMethod && !Impls(e).isInstanceOf[Redirect]))) {
-    //   stream.println("  " + makeOpMethodSignature(o, withReturnTpe = Some(true)))
-    // }
-
-    // stream.println("}")
-
-    // // compiler ops
-    // val compilerOps = opsGrp.ops.filter(e=>e.style == compilerMethod)
-    // if (!compilerOps.isEmpty) {
-    //   stream.println("trait " + opsGrp.grp.name + "CompilerOps extends " + opsGrp.name + " {")
-    //   stream.println("  this: " + dsl + " => ")
-    //   stream.println()
-    //   if (unique(compilerOps).length != compilerOps.length) err("non-unique compiler op variants (e.g. Var, T args) are not yet supported")
-    //   for (o <- compilerOps) {
-    //     if (Impls(o).isInstanceOf[Redirect]) {
-    //       stream.println("  " + makeOpMethodSignature(o) + " = " + makeOpMethodNameWithFutureArgs(o, a => if (a.name ==  o.args.apply(0).name) "self" else simpleArgName(a)))
-    //     }
-    //     else {
-    //       stream.println("  " + makeOpMethodSignature(o, withReturnTpe = Some(true)))
-    //     }
-    //   }
-    //   stream.println("}")
-    //   stream.println()
-    // }
   }
 }
