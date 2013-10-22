@@ -162,33 +162,45 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
 
   def simpleArgName(t: Rep[DSLArg]): String = t.name
 
-  def makeArgs(args: List[Rep[DSLArg]], makeArgName: (Rep[DSLArg] => String) = simpleArgName, addParen: Boolean = true) = {
+  def makeArgs(args: List[Rep[DSLArg]], makeArgName: (Rep[DSLArg] => String) = simpleArgName, addParen: Boolean = true, writeIndices: List[Int] = Nil) = {
     if (args.length == 0 && !addParen) {
       ""
     }
     else {
-      "(" + args.map(makeArgName).mkString(",") + ")"
+      "(" + args.zipWithIndex.toList.map({ x => 
+          val a = x._1
+          val i = x._2
+          
+          {
+            if (writeIndices.contains(i))
+            "@write "
+            else 
+              ""
+          } + makeArgName(a)
+      }).mkString(",") + ")"
     }
   }
 
-  override def argify(a: Exp[DSLArg], typify: Exp[DSLType] => String = repify): String = a match {
+  override def argify(a: Exp[DSLArg], typify: Exp[DSLType] => String = typify): String = a match {
     case Def(Arg(name, tpe@Def(FTpe(args,ret,freq)), Some(d))) => name + ": " + typify(tpe) + " = " + escape(d)
     case Def(Arg(name, tpe, Some(d))) => name + ": " + typify(tpe) + " = " + escape(d)
     case Def(Arg(name, tpe, None)) => name + ": " + typify(tpe)
   }
 
-  def makeArgsWithType(args: List[Rep[DSLArg]], typify: Rep[DSLType] => String = repify, addParen: Boolean = true) = makeArgs(args, t => argify(t, typify), addParen)
+  def makeArgsWithType(args: List[Rep[DSLArg]], typify: Rep[DSLType] => String = typify, addParen: Boolean = true) = makeArgs(args, t => argify(t, typify), addParen)
 
-  // def makeArgsWithNowType(args: List[Rep[DSLArg]], addParen: Boolean = true) = makeArgsWithType(args, repifySome, addParen)
-  def makeArgsWithNowType(args: List[Rep[DSLArg]], addParen: Boolean = true) = makeArgsWithType(args, typifySome, addParen)
+  def makeArgsWithNowType(args: List[Rep[DSLArg]], addParen: Boolean = true) = makeArgsWithType(args, repifySome, addParen)
+
+  def makeShallowArgs(args: List[Rep[DSLArg]], writeIndices: List[Int]) = makeArgs(args, t => argify(t, typify), true, writeIndices)
+
+  // FIXME
+  def makeShallowCurriedArgs(args: List[List[Rep[DSLArg]]], writeIndices: List[Int]) = ???
 
   def makeOpArgs(o: Rep[DSLOp], addParen: Boolean = true) = makeArgs(o.args, addParen = addParen)
 
   def makeOpFutureArgs(o: Rep[DSLOp], makeArgName: (Rep[DSLArg] => String)) = makeArgs(o.args, t => { val arg = makeArgName(t); if (t.tpe.stage == now && !isTpeInst(t.tpe)) "unit("+arg+")" else arg })
 
   def makeOpArgsWithType(o: Rep[DSLOp], typify: Rep[DSLType] => String = typify, addParen: Boolean = true) = makeArgsWithType(o.args, typify, addParen)
-
-  def makeOpArgsWithNowType(o: Rep[DSLOp], addParen: Boolean = true) = makeArgsWithNowType(o.args, addParen)
 
   def makeFullArgs(o: Rep[DSLOp], makeArgs: Rep[DSLOp] => String) = {
     // we always pass implicit arguments explicitly (in practice, less issues arise this way)
@@ -257,11 +269,6 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     out
   }
 
-  def makeDefWithOverride(o: Rep[DSLOp]) = {
-    if (overrideList.contains(o.name)) "override def"
-    else "def"
-  }
-
   def makeOpMethodName(o: Rep[DSLOp]) = {
     Labels.getOrElse(o, {
       // adding the nameClashId is another way to avoid chaining the Overload implicit, but the weird method names that result are confusing
@@ -276,50 +283,18 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     })
   }
 
-  def makeOpMethodNameWithArgs(o: Rep[DSLOp]) = makeOpMethodName(o) + makeFullArgs(o, o => makeOpArgs(o))
-
-  def makeOpMethodNameWithFutureArgs(o: Rep[DSLOp], makeArgName: Rep[DSLArg] => String = simpleArgName) = {
-    if (Impls(o).isInstanceOf[Redirect]) {
-      var call = "{ " + inline(o, Impls(o).asInstanceOf[Redirect].func, quoteLiteral) + " }"
-      for (i <- 0 until o.args.length) {
-        call = call.replaceAllLiterally(o.args.apply(i).name, makeArgName(o.args.apply(i)))
-      }
-      call
-    }
-    else {
-      makeOpMethodName(o) + makeFullArgs(o, k => makeOpFutureArgs(k,makeArgName))
-    }
-  }
-
-  def makeOpMethodSignature(o: Rep[DSLOp], withReturnTpe: Option[Boolean] = None) = {
-    val addRet = withReturnTpe.getOrElse(Config.fastCompile)
-    val ret = if (addRet || isRedirect(o)) ": " + typifySome(o.retTpe) else ""
-    val implicitArgs = if (needOverload(o)) makeOpImplicitArgsWithOverloadWithType(o, useCanonical = true) else makeOpImplicitArgsWithType(o)
-    // if (Config.fastCompile) {
-    //   "def " + makeOpMethodName(o) + makeTpeParsWithBounds(o.tpePars) + makeOpArgsWithType(o) + makeOpImplicitArgsWithType(o) + ret
-    // }
-    // else {
-    // SHALLOW
-    "protected def " + makeOpMethodName(o) + makeTpeParsWithBounds(o.tpePars) + makeOpArgsWithType(o) + implicitArgs + ret
-    // }
-  }
-
   def makeSyntaxMethod(o: Rep[DSLOp], prefix: String = "def ", withReturnTpe: Option[Boolean] = None) = {
     // adding the return type increases verbosity in the generated code, so we omit it by default
     // val addRet = withReturnTpe.getOrElse(Config.fastCompile)
     // val ret = if (addRet || isRedirect(o)) ": " + repifySome(o.retTpe) else ""
     val ret = ": " + typifySome(o.retTpe)
-    val curriedArgs = o.curriedArgs.map(a => makeArgsWithNowType(a)).mkString("")
-    // prefix + o.name + makeTpeParsWithBounds(o.tpePars) + makeArgsWithNowType(o.firstArgs, o.effect != pure) + curriedArgs + makeOpImplicitArgsWithOverloadWithType(o) + ret + " = " + makeOpMethodNameWithFutureArgs(o)
-    prefix + o.name + makeTpeParsWithBounds(o.tpePars) + makeArgsWithNowType(o.firstArgs, o.effect != pure) + curriedArgs + makeOpImplicitArgsWithOverloadWithType(o) + ret + " = "
-  }
-
-  def makeOpImplMethodName(o: Rep[DSLOp]) = makeOpMethodName(o) + "_impl" + nameClashId(o)
-
-  def makeOpImplMethodNameWithArgs(o: Rep[DSLOp], postfix: String = "") = makeOpImplMethodName(o) + postfix + makeTpePars(o.tpePars) + makeOpArgs(o) + makeOpImplicitArgs(o)
-
-  def makeOpImplMethodSignature(o: Rep[DSLOp], postfix: String = "", returnTpe: Option[String] = None) = {
-    "def " + makeOpImplMethodName(o) + postfix + makeTpeParsWithBounds(o.tpePars) + makeOpArgsWithType(o) + makeOpImplicitArgsWithType(o) + ": " + (returnTpe getOrElse repifySome(o.retTpe))
+    val writeIndices = o.effect match {
+      case w: write => w.args.toList
+      case _ => Nil
+    }
+    val curriedArgs = o.curriedArgs.map(a => makeShallowArgs(a, writeIndices.map(_ - o.firstArgs.length))).mkString("")
+    val fxAnn = if (o.effect.isInstanceOf[write]) "" else fxAnnotString(o)
+    fxAnn + prefix + o.name + makeTpeParsWithBounds(o.tpePars) + makeShallowArgs(o.firstArgs, writeIndices) + curriedArgs + makeOpImplicitArgsWithOverloadWithType(o) + ret + " = "
   }
 
 
@@ -547,6 +522,14 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     }
   }
 
+  def fxAnnotString(o: Rep[DSLOp]): String = o.effect match {
+    case `pure` => ""
+    case `mutable` => "@mutable "
+    case `simple` => "@simple "
+    case write(args @ _*) => "@write "
+    case `global` => "@global "
+  }
+
   def emitOpSyntax(opsGrp: DSLOps, stream: PrintWriter) {
     emitBlockComment("Operations", stream)
     stream.println()
@@ -571,7 +554,8 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     // }
 
     // static ops
-    val staticOps = opsGrp.ops.filter(e=>e.style==staticMethod || e.style==directMethod || e.style == compilerMethod)
+    // FIXME let's not consider direct methods for the moment
+    val staticOps = opsGrp.ops.filter(e=>e.style==staticMethod /*|| e.style==directMethod */|| e.style == compilerMethod)
     val objects = staticOps.groupBy(_.grp.name)
     for ((name, ops) <- objects) {
       stream.println("object " + name + " {")
@@ -646,12 +630,18 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
         stream.println("  import " + helpClsName + "._")
 
         def emitOp(o: Rep[DSLOp], prefix: String = "def") {
-          val otherArgs = makeArgsWithNowType(o.firstArgs.drop(1))
-          val curriedArgs = o.curriedArgs.map(a => makeArgsWithNowType(a)).mkString("")
+          val writeIndices = o.effect match {
+            case w: write => w.args.toList map (_ - 1)
+            case _ => Nil
+          }
+          val otherArgs = makeShallowArgs(o.firstArgs.drop(1), writeIndices)
+          // only works for a single curried args
+          val curriedArgs = o.curriedArgs.map(a => makeShallowArgs(a, writeIndices.map(_ - otherArgs.length))).mkString("")
           val hkTpePars = if (isTpePar(tpe)) tpePars else getHkTpe(tpe).tpePars
           val otherTpePars = o.tpePars.filterNot(p => hkTpePars.map(_.name).contains(p.name))
           val ret = ": " + typifySome(o.retTpe)
-          stream.print("  " + prefix + " " + o.name + makeTpeParsWithBounds(otherTpePars) + otherArgs + curriedArgs
+          val fxAnn = fxAnnotString(o)
+          stream.print("  " + fxAnn + prefix + " " + o.name + makeTpeParsWithBounds(otherTpePars) + otherArgs + curriedArgs
             + (makeImplicitArgsWithCtxBoundsWithType(implicitArgsWithOverload(o) diff (arg("__pos",MSourceContext)), o.tpePars diff otherTpePars, without = hkTpePars)) + ret + " = ")
           emitImpl(o, stream)
         }

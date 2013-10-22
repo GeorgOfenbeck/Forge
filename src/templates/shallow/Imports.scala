@@ -11,6 +11,7 @@ trait ShallowGenImports extends ForgeCodeGenBase {
 
   def emitForgeLibraryImports(stream: PrintWriter) {
     stream.println("import ch.epfl.lamp.autolifter.library._")
+    stream.println("import ch.epfl.lamp.autolifter.annotations._")
     stream.println("import ForgeArray._")
     stream.println("import ForgeArrayBuffer._")
     stream.println("import Numeric._")
