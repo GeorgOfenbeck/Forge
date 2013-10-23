@@ -170,7 +170,7 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
       "(" + args.zipWithIndex.toList.map({ x => 
           val a = x._1
           val i = x._2
-          
+
           {
             if (writeIndices.contains(i))
             "@write "
@@ -625,7 +625,12 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
         stream.println()
         val fields = DataStructs.get(tpe)
         val fieldsString = fields map (makeFieldArgs) getOrElse ""
-        stream.println("class " + opsClsName + "(" + fieldsString + ") { self => ")
+        val parallelCollection = ForgeCollections.get(tpe).map(c => " extends " + ( c match {
+          case p: ParallelCollection => "ParallelCollection"
+          case p: ParallelCollectionBuffer => " ParallelCollectionBuffer"
+
+          }) + "[" + quote(c.tpeArg) + "] ").getOrElse("")
+        stream.println("class " + opsClsName + "(" + fieldsString + ")" + parallelCollection + " { self => ")
         stream.println(fields map makeFieldsWithInitArgs getOrElse "")
         stream.println("  import " + helpClsName + "._")
 
