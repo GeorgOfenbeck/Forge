@@ -480,13 +480,23 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
         // inline(o, rule.decl, quoteLiteral).split(nl).foreach { line => emitWithIndent(line, stream, indent) }
         emitFunc(rule.decl)
       case Getter(structArgIndex,field) =>
-        stream.print("/*getter*/")
+        // stream.print("/*getter*/")
+        val c = o.args.apply(structArgIndex).name
+        stream.print("Forge.getter" + "(" + c + ", " + c + ".")
+        emitFunc(field)
+        stream.println(")")
         // emitOverloadShadows(o, stream, indent)
-        emitWithIndent(inline(o, quotedArg(o.args.apply(structArgIndex).name)) + "." + field, stream, indent)
+        // emitWithIndent(inline(o, quotedArg(o.args.apply(structArgIndex).name)) + "." + field, stream, indent)
       case Setter(structArgIndex,field,value) =>
-        stream.print("/*setter*/")
+        // stream.print("/*setter*/")
+        val c = o.args.apply(structArgIndex).name
+        stream.print("Forge.setter" + "(" + c + ", " + c + ".")
+        emitFunc(field)
+        stream.print(", ")
+        emitFunc(value)
+        stream.println(")")
         // emitOverloadShadows(o, stream, indent)
-        emitWithIndent(inline(o, quotedArg(o.args.apply(structArgIndex).name)) + "." + field + " = " + inline(o,value), stream, indent)
+        // emitWithIndent(inline(o, quotedArg(o.args.apply(structArgIndex).name)) + "." + field + " = " + inline(o,value), stream, indent)
         // emitWithIndent(inline(o, quotedArg(o.args.apply(structArgIndex).name)) + "." + field + " = ", stream, indent)
         // emitFunc(value)
       case Allocates(tpe,init) =>
