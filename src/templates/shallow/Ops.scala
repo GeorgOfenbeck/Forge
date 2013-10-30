@@ -189,7 +189,7 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
 
   def makeArgsWithType(args: List[Rep[DSLArg]], typify: Rep[DSLType] => String = typify, addParen: Boolean = true) = makeArgs(args, t => argify(t, typify), addParen)
 
-  def makeArgsWithNowType(args: List[Rep[DSLArg]], addParen: Boolean = true) = makeArgsWithType(args, repifySome, addParen)
+  def makeArgsWithNowType(args: List[Rep[DSLArg]], addParen: Boolean = true) = makeArgsWithType(args, typifySome, addParen)
 
   def makeShallowArgs(args: List[Rep[DSLArg]], writeIndices: List[Int]) = makeArgs(args, t => argify(t, typify), true, writeIndices)
 
@@ -249,7 +249,7 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
   def makeImplicitArgsWithType(implicitArgs: List[Rep[DSLArg]], asVals: Boolean = false) = {
     val implArgs = implicitArgs diff (arg("__pos",MSourceContext))
     val prefix = if (asVals == true) "val " else ""
-    if (implArgs.length > 0) "(implicit " + implArgs.map(t => prefix + argify(t,repifySome)).mkString(",") + ")"
+    if (implArgs.length > 0) "(implicit " + implArgs.map(t => prefix + argify(t,typifySome)).mkString(",") + ")"
     else ""
   }
 
@@ -376,7 +376,7 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     // val ret = typifySome(o.retTpe)
     // emitWithIndent("{", stream, indent)
     def tpeParser(prod: Product): String = 
-      makeTpePars(prod.productIterator.toList.asInstanceOf[List[Rep[DSLType]]].filter(isTpePar).:+(o.retTpe).asInstanceOf[List[Rep[TypePar]]])
+      makeTpePars(prod.productIterator.toList.asInstanceOf[List[Rep[DSLType]]]/*.filter(isTpePar)*/.:+(o.retTpe).asInstanceOf[List[Rep[TypePar]]])
     def emitFunc(func: Rep[String]) {
       inline(o, func, quoteLiteral).split(nl).toList match {
         case List(line) => stream.print(line)
