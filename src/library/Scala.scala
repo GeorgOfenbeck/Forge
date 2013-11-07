@@ -247,6 +247,7 @@ trait ScalaOps {
       }
     }))
 
+
     // TODO: something is broken with IfThenElse here; bound symbols (effects) are getting hoisted if the frequencies are not set to cold.
     val T = tpePar("T")
     val ifThenElse = direct (Misc) ("__ifThenElse", List(T), List(MThunk(MBoolean),MThunk(T,cold),MThunk(T,cold)) :: T)
@@ -272,6 +273,7 @@ trait ScalaOps {
     noInfixList :::= List("AsInstanceOf", "IsInstanceOf")
 
     infix (Cast) ("AsInstanceOf", (A,B), A :: B) implements codegen($cala, ${ $0.asInstanceOf[$t[B]] })
+    direct (Cast) ("infix_asInstanceOf", (B), MAny :: B) implements codegen($cala, ${ $0.asInstanceOf[$t[B]] })
     infix (Cast) ("IsInstanceOf", (A,B), A :: MBoolean) implements codegen($cala, ${ $0.isInstanceOf[$t[B]] })
   }
 
@@ -303,11 +305,13 @@ trait ScalaOps {
     val AC = tpePar("A", stage = now)
     val BC = tpePar("B", stage = now)
 
-    direct (Ord) ("__equal", (A,B), (A,B) :: MBoolean) implements (codegen($cala, quotedArg(0) + " == " + quotedArg(1)))
-    direct (Ord) ("__equal", (A,B), (MVar(A),B) :: MBoolean) implements (codegen($cala, quotedArg(0) + " == " + quotedArg(1)))
-    direct (Ord) ("__equal", (A,B), (A,MVar(B)) :: MBoolean) implements (codegen($cala, quotedArg(0) + " == " + quotedArg(1)))
-    direct (Ord) ("__equal", (A,BC), (A,BC) :: MBoolean) implements (codegen($cala, quotedArg(0) + " == " + quotedArg(1)))
-    direct (Ord) ("__equal", (AC,B), (AC,B) :: MBoolean) implements (codegen($cala, quotedArg(0) + " == " + quotedArg(1)))
+    for (eq <- List("infix_==", "__equal")) {
+      direct (Ord) (eq, (A,B), (A,B) :: MBoolean) implements (codegen($cala, quotedArg(0) + " == " + quotedArg(1)))
+      direct (Ord) (eq, (A,B), (MVar(A),B) :: MBoolean) implements (codegen($cala, quotedArg(0) + " == " + quotedArg(1)))
+      direct (Ord) (eq, (A,B), (A,MVar(B)) :: MBoolean) implements (codegen($cala, quotedArg(0) + " == " + quotedArg(1)))
+      direct (Ord) (eq, (A,BC), (A,BC) :: MBoolean) implements (codegen($cala, quotedArg(0) + " == " + quotedArg(1)))
+      direct (Ord) (eq, (AC,B), (AC,B) :: MBoolean) implements (codegen($cala, quotedArg(0) + " == " + quotedArg(1)))
+    }
 
     val neq = infix (Ord) ("!=", (A,B), (A,B) :: MBoolean)
     impl (neq) (codegen($cala, quotedArg(0) + " != " + quotedArg(1)))
