@@ -5,8 +5,8 @@ package shared
 import java.io.{File,PrintWriter,FileWriter}
 import scala.tools.nsc.io.{Directory,Path}
 import scala.reflect.SourceContext
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenericFatCodegen, GenericCodegen}
+import scala.lms.common._
+import scala.lms.internal.{GenericFatCodegen, GenericCodegen}
 
 import core._
 

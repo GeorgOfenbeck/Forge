@@ -6,7 +6,7 @@ import java.io.{BufferedWriter, FileWriter, PrintWriter}
 import scala.util.matching._
 import scala.tools.nsc.io._
 import scala.collection.mutable.ArrayBuffer
-import scala.virtualization.lms.common._
+import scala.lms.common._
 
 import core._
 import shared.{BaseGenOps,BaseGenDataStructures}

@@ -3,7 +3,7 @@ package templates
 package compiler
 
 import java.io.PrintWriter
-import scala.virtualization.lms.common._
+import scala.lms.common._
 import core._
 import shared.BaseGenPackages
 import Utilities._

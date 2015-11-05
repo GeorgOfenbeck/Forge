@@ -4,8 +4,8 @@ package core
 import java.io.{BufferedWriter, FileWriter, PrintWriter}
 import scala.tools.nsc.io._
 import scala.reflect.SourceContext
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenericFatCodegen, GenericCodegen}
+import scala.lms.common._
+import scala.lms.internal.{GenericFatCodegen, GenericCodegen}
 
 import templates.shared.ForgeCodeGenShared
 import templates.library.ForgeCodeGenInterpreter

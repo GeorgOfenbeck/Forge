@@ -5,8 +5,8 @@ import java.io.{File,PrintWriter,FileWriter}
 import scala.tools.nsc.io.{Directory,Path}
 import scala.reflect.SourceContext
 import scala.collection.mutable.{ArrayBuffer,HashSet,HashMap}
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenericFatCodegen, GenericCodegen}
+import scala.lms.common._
+import scala.lms.internal.{GenericFatCodegen, GenericCodegen}
 
 import library._
 import format._

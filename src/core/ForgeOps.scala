@@ -3,8 +3,8 @@ package core
 
 import java.io.{PrintWriter}
 import scala.reflect.SourceContext
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal._
+import scala.lms.common._
+import scala.lms.internal._
 import scala.collection.mutable.{ArrayBuffer,HashMap}
 
 trait ForgeOps extends Base {
