@@ -36,7 +36,7 @@ trait ForgeScalaOpsPkg extends Base
   with BooleanOps with PrimitiveOps with TupleOps with CastingOps
 
 trait ForgeScalaOpsPkgExp extends ForgeScalaOpsPkg
-  with ImplicitOpsExp with OrderingOpsExp with StringOpsExp  with ArrayOpsExp
+  with ImplicitOpsExp with OrderingOpsExp with StringOpsExp  with ArrayOpsExp with SeqOpsExp
   with BooleanOpsExp with PrimitiveOpsExp with TupleOpsExp with CastingOpsExp
 
 trait ForgeScalaCodeGenPkg extends ScalaGenEffect

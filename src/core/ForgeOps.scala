@@ -10,6 +10,17 @@ import scala.collection.mutable.{ArrayBuffer,HashMap}
 trait ForgeOps extends Base {
   this: Forge =>
 
+  implicit def dslGroupTyp : Typ[DSLGroup]
+  implicit def dslTypeTyp : Typ[DSLType]
+  implicit def dslTypeClassTyp : Typ[DSLTypeClass]
+  implicit def dslTypeClassInstTyp : Typ[DSLTypeClassInst]
+  implicit def typeParTyp : Typ[TypePar]
+  implicit def typeAliasTyp : Typ[TypeAlias]
+  implicit def dslArgTyp : Typ[DSLArg]
+  implicit def dslDataTyp : Typ[DSLData]
+  implicit def dslOpTyp : Typ[DSLOp]
+  implicit def dslIdentifierTyp : Typ[DSLIdentifier]
+
   def infix_withBound(a: Rep[TypePar], b: TypeClassSignature) = forge_withbound(a,b)
   implicit class TpeClassOps(a: TypeClassSignature) {
     def apply(b: Rep[DSLType]*) = forge_typeclasson(a,b.toList)
@@ -229,6 +240,17 @@ trait ForgeSugar extends ForgeSugarLowPriority {
 
 trait ForgeOpsExp extends ForgeSugar with BaseExp {
   this: ForgeExp  =>
+
+  implicit def dslGroupTyp : Typ[DSLGroup] = manifestTyp
+  implicit def dslTypeTyp : Typ[DSLType] = manifestTyp
+  implicit def dslTypeClassTyp : Typ[DSLTypeClass] = manifestTyp
+  implicit def dslTypeClassInstTyp : Typ[DSLTypeClassInst] = manifestTyp
+  implicit def typeParTyp : Typ[TypePar] = manifestTyp
+  implicit def typeAliasTyp : Typ[TypeAlias] = manifestTyp
+  implicit def dslArgTyp : Typ[DSLArg] = manifestTyp
+  implicit def dslDataTyp : Typ[DSLData] = manifestTyp
+  implicit def dslOpTyp : Typ[DSLOp] = manifestTyp
+  implicit def dslIdentifierTyp : Typ[DSLIdentifier] = manifestTyp
 
   /*
    * Compiler state
