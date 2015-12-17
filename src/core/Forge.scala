@@ -214,7 +214,7 @@ trait ForgeUtilities {
   def err(s: String)(implicit ctx: SourceContext) = {
     println("[forge error]: " + s)
     // println("  at " + (ctx.fileName.split("/").last + ":" + ctx.line))
-    println("  at " + quotePos(fresh[Nothing].withPos(List(ctx))))
+    println("  at " + quotePos(fresh[Nothing](nothingTyp).withPos(List(ctx))))
     sys.exit(1)
   }
   def warn(s: String) = println("[forge warning]: " + s)
