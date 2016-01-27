@@ -320,7 +320,7 @@ trait LibGenOps extends BaseGenOps with BaseGenDataStructures {
 
     for (o <- unique(opsGrp.ops) if !Impls(o).isInstanceOf[Redirect]) {
       // no return tpe because not all of the tpes are in scope in the lib wrapper
-      stream.println("  " + makeOpMethodSignature(o, withReturnTpe = Some(false)) + " = {")
+      stream.println("  " + makeOpMethodSignature(o, withReturnTpe = Some(true)) + " = {")
       o.style match {
         case `infixMethod` if overrideList.contains(o.name) && grpIsTpe(opsGrp.grp) && DataStructs.contains(grpAsTpe(opsGrp.grp)) && o.args.length > 1 && quote(o.args.apply(0).tpe) == quote(opsGrp.grp) =>
           //val args = o.args/*.drop(1)*/.map(t => t.name)).mkString(",")

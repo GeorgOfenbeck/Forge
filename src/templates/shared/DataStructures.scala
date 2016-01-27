@@ -28,7 +28,7 @@ trait BaseGenDataStructures extends ForgeCodeGenBase {
   def makeFieldsWithInitArgs(s: Exp[DSLData]) = {
     var fieldStr = ""
     for ((name,tpe) <- s.fields) {
-      val arg = name + " = __" + name
+      val arg = name + ": " + quote(tpe) + " = __" + name
       fieldStr += "  var " + arg + nl
     }
     fieldStr

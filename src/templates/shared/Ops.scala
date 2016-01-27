@@ -360,7 +360,7 @@ trait BaseGenOps extends ForgeCodeGenBase {
 
   def makeSyntaxMethod(o: Rep[DSLOp], prefix: String = "def ", withReturnTpe: Option[Boolean] = None) = {
     // adding the return type increases verbosity in the generated code, so we omit it by default
-    val addRet = withReturnTpe.getOrElse(Config.fastCompile)
+    val addRet = true//withReturnTpe.getOrElse(Config.fastCompile)
     val ret = if (addRet || isRedirect(o)) ": " + repifySome(o.retTpe) else ""
     val curriedArgs = o.curriedArgs.map(a => makeArgsWithNowType(a)).mkString("")
     prefix + o.name + makeTpeParsWithBounds(o.tpePars) + makeArgsWithNowType(o.firstArgs, o.effect != pure || o.name == "apply") + curriedArgs + makeOpImplicitArgsWithOverloadWithType(o) + ret + " = " + makeOpMethodNameWithFutureArgs(o)
