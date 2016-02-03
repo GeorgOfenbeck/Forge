@@ -26,7 +26,7 @@ trait AutoOps {
 
     //val Ops = withTpe(Grp)
 
-    for (m <- tt.tpe.members if m.isMethod) {
+    for (m <- tt.tpe.members if m.isMethod && !m.asMethod.isConstructor && m.owner == tt.tpe.typeSymbol) {
 
         println(m + ": takesTypeArgs " + m.asTerm.typeSignature.takesTypeArgs)
 
@@ -50,7 +50,7 @@ trait AutoOps {
 
             val ret = ftpe(mt.resultType)
 
-            infix (Grp) (m.name.toString, Nil, ((Tpe :: params)) :: ret, Nil, simple) implements
+            infix (Grp) (generateCodeForName(m.name.toString), Nil, ((Tpe :: params)) :: ret, Nil, simple) implements
                 (codegen($cala, quotedArg(0) + "." + m.name + argsStr))
 
             // TODO: overloading?? --> duplicate codegen warning
@@ -61,6 +61,17 @@ trait AutoOps {
 
     }
 
+  }
+
+  // borrowed from slick
+  def generateCodeForName(name: String): String = {
+    name match {
+      case "$times" => "*"
+      case "$plus" => "+"
+      case "$less$greater" => "<>"
+      case "$tilde" => "~"
+      case _ => name
+    }
   }
 
 }

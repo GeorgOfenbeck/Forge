@@ -262,6 +262,21 @@ trait ForgeCodeGenBase extends GenericCodegen with ScalaGenBase {
     case _ => "Rep[" + quote(a) + "]"
   }
 
+  def typify(a: Exp[Any]): String = a match {
+    case Def(Arg(name, tpe, default)) => typify(tpe)
+    case Def(FTpe(args,ret,freq)) => args match {
+      case List(Def(Arg(_,`byName`,_))) => " => " + typify(ret)
+      case _ => "(" + args.map(typify).mkString(",") + ") => " + typify(ret)
+    }
+    case Def(Tpe(name, arg, `compile`)) => quote(a)
+    case Def(Tpe("Var", arg, stage)) => typify(arg(0))
+    case Def(TpeClass(_,_,_)) | Def(TpeClassInst(_,_,_)) => quote(a)
+    case Def(TpeInst(Def(Tpe("Var",a1,s1)), a2)) => typify(a2(0))
+    case Def(TpeInst(Def(Tpe(name, args, `compile`)), args2)) => name + (if (!args2.isEmpty) "[" + args2.map(typifySome).mkString(",") + "]" else "") // implicits don't auto-convert things wrapped in an outer tpe, so we still use typifySome
+    case Def(VarArgs(t)) => "Seq[" + typify(t) + "]"
+    case _ => quote(a)
+  }
+
   def repifySome(a: Exp[Any]): String = a match {
     case Def(Arg(name, tpe, default)) => repifySome(tpe)
     case Def(FTpe(args,ret,freq)) => args match {
@@ -276,6 +291,21 @@ trait ForgeCodeGenBase extends GenericCodegen with ScalaGenBase {
     case Def(TpeInst(Def(Tpe("Var",a1,s1)), a2)) => varify(a2(0))
     case Def(VarArgs(t)) => repifySome(t) + "*"
     case _ => repify(a)
+  }
+
+  def typifySome(a: Exp[Any]): String = a match {
+    case Def(Arg(name, tpe, default)) => typifySome(tpe)
+    case Def(FTpe(args,ret,freq)) => args match {
+      case List(Def(Arg(_,`byName`,_))) => " => " + typifySome(ret)
+      case _ => "(" + args.map(typifySome).mkString(",") + ") => " + typifySome(ret)
+    }
+    case Def(Tpe(name, arg, `now`)) => quote(a)
+    case Def(Tpe("Var", arg, stage)) => varify(arg(0))
+    case Def(TpePar(name, ctx, `now`)) => quote(a)
+    case Def(TpeInst(Def(Tpe("Var",a1,s1)), a2)) => varify(a2(0))
+    case Def(TpeInst(Def(Tpe(name, args, `now` | `compile`)), args2)) => name + (if (!args2.isEmpty) "[" + args2.map(typifySome).mkString(",") + "]" else "") // is this the right thing to do?
+    case Def(VarArgs(t)) => typifySome(t) + "*"
+    case _ => typify(a)
   }
 
   def argify(a: Exp[DSLArg], typify: Exp[DSLType] => String = repify): String = a match {
