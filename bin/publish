@@ -168,10 +168,12 @@ def sbtBuildFileFooter(dsl):
   // build targets
   lazy val ${dslName} = Project("${dslName}", file("."), settings = virtBuildSettings ++ deps) dependsOn(${dslName}Apps) // default
   lazy val ${dslName}Shared = Project("${dslName}-shared", file("shared"), settings = virtBuildSettings ++ deps)
-  lazy val ${dslName}Comp = Project("${dslName}-comp", file("compiler"), settings = virtBuildSettings ++ deps) dependsOn(${dslName}Shared)
+  //lazy val ${dslName}Comp = Project("${dslName}-comp", file("compiler"), settings = virtBuildSettings ++ deps) dependsOn(${dslName}Shared)
   lazy val ${dslName}Lib = Project("${dslName}-lib", file("library"), settings = virtBuildSettings ++ deps) dependsOn(${dslName}Shared)
-  lazy val ${dslName}Ident = Project("${dslName}-ident", file("ident"), settings = virtBuildSettings ++ deps) dependsOn(${dslName}Shared)
-  lazy val ${dslName}Apps = Project("${dslName}-apps", file("apps"), settings = virtBuildSettings ++ deps) dependsOn(${dslName}Comp, ${dslName}Lib, ${dslName}Ident)
+  //lazy val ${dslName}Ident = Project("${dslName}-ident", file("ident"), settings = virtBuildSettings ++ deps) dependsOn(${dslName}Shared)
+  lazy val ${dslName}Shallow = Project("${dslName}-shallow", file("shallow"), settings = virtBuildSettings ++ deps)
+  //lazy val ${dslName}Apps = Project("${dslName}-apps", file("apps"), settings = virtBuildSettings ++ deps) dependsOn(${dslName}Comp, ${dslName}Lib, ${dslName}Ident, ${dslName}Shallow)
+  lazy val ${dslName}Apps = Project("${dslName}-apps", file("apps"), settings = virtBuildSettings ++ deps) dependsOn(${dslName}Lib, ${dslName}Shallow)
   lazy val ${dslName}Tests = Project("${dslName}-tests", file("tests"), settings = virtBuildSettingsBase ++ deps ++ Seq(
     scalaSource in Test <<= baseDirectory(_ / "src"),
     parallelExecution in Test := false,
@@ -181,7 +183,8 @@ def sbtBuildFileFooter(dsl):
     // and http://www.scala-sbt.org/release/docs/Forking.html
     testGrouping in Test <<= definedTests in Test map separateTests,
     fork := true
-  )) dependsOn(${dslName}Comp, ${dslName}Lib)
+  //)) dependsOn(${dslName}Comp, ${dslName}Lib)
+  )) dependsOn(${dslName}Lib, ${dslName}Shallow)
 }
 """)
     return s.substitute(dslName=dsl)
@@ -214,7 +217,7 @@ def publish_static_extern(dsl, build_dir, scratch_dir):
     rename_all(scratch_dir, {'HUMAN_DSL_NAME': dsl, 'LOWERCASE_DSL_NAME': dsl.lower()})
 
     # we need to mirror the package layout convention defined in Forge
-    all_targets = ['shared','compiler','library']
+    all_targets = ['shared','compiler','library','shallow']
     targets = [t for t in all_targets if os.path.exists(build_dir + t + "/src/")]
     for t in targets:
         dest_root = t + "/"
@@ -236,7 +239,7 @@ def publish_dsl_extern(dsl, build_dir, scratch_dir, final_name):
           publish_dsl_extern(line.rstrip("\n"), build_dir, scratch_dir, final_name)
 
     # we need to mirror the package layout convention defined in Forge
-    all_targets = ['shared','compiler','library']
+    all_targets = ['shared','compiler','library','shallow']
     targets = [t for t in all_targets if os.path.exists(build_dir + t + "/src/")]
     tmp_dest = scratch_dir + dsl + "_extern/"
     for t in targets:

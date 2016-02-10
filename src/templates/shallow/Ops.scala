@@ -124,7 +124,7 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
   // def nameClash(o1: Rep[DSLOp], o2: Rep[DSLOp]) = o1.name == o2.name && o1.args.length == o2.args.length && (o1.args.zip(o2.args).forall(t => getHkTpe(t._1.tpe).name == getHkTpe(t._2.tpe).name || (t._1.tpe.stage == future && t._2.tpe.stage == future)))
   def nameClash(o1: Rep[DSLOp], o2: Rep[DSLOp]) = o1.style == o2.style && o1.name == o2.name // forces a global numbering
 
-  def nameClashesGrp(o: Rep[DSLOp]) = opsGrpOf(o).ops.filter(o2 => o.grp.name == o2.grp.name && nameClash(o,o2))
+  def nameClashesGrp(o: Rep[DSLOp]) = opsGrpOf(o).map(_.ops.filter(o2 => o.grp.name == o2.grp.name && nameClash(o,o2))).getOrElse(Nil)
 
   def nameClashesUniversal(o: Rep[DSLOp]) = allOps.filter(o2 => nameClash(o,o2))
 
@@ -357,11 +357,6 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
         if (ForgeCollections.get(col).isEmpty || !ForgeCollections.get(getHkTpe(o.retTpe)).forall(_.isInstanceOf[ParallelCollectionBuffer])) err("filter return type " + col.name + " is not a ParallelCollectionBuffer")
         if (filter.tpePars.productIterator.exists(a => !validTpePar(o,a.asInstanceOf[Rep[DSLType]]))) err("filter op with undefined type par: " + o.name)
         if (filter.argIndex < 0 || filter.argIndex > o.args.length) err("filter op with illegal arg parameter: " + o.name)
-      case hfr:HashFilterReduce =>
-        val col = getHkTpe(o.args.apply(hfr.argIndex).tpe)
-        if (ForgeCollections.get(col).isEmpty || !ForgeCollections.get(getHkTpe(o.retTpe)).forall(_.isInstanceOf[ParallelCollectionBuffer])) err("hashFilterReduce return type " + col.name + " is not a ParallelCollectionBuffer")
-        if (hfr.tpePars.productIterator.exists(a => !validTpePar(o,a.asInstanceOf[Rep[DSLType]]))) err("hashFilterReduce op with undefined type par: " + o.name)
-        if (hfr.argIndex < 0 || hfr.argIndex > o.args.length) err("hashFilterReduce op with illegal arg parameter: " + o.name)
       case foreach:Foreach =>
         val col = getHkTpe(o.args.apply(foreach.argIndex).tpe)
         if (ForgeCollections.get(col).isEmpty) err("foreach argument " + col.name + " is not a ParallelCollection")
@@ -450,17 +445,6 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
         emitFunc(filter.cond)
         stream.print("), (")
         emitFunc(filter.func)
-        stream.println("))")
-      }
-      case hfr:HashFilterReduce => {
-        val in = o.args.apply(hfr.argIndex).name
-        val tpePars = tpeParser(hfr.tpePars)
-        stream.print("Delite.hashFilterReduce" + tpePars + "(" + in + ", (")
-        List(hfr.cond, hfr.key, hfr.map, hfr.zero) foreach { func =>
-          emitFunc(func)
-          stream.print("), (")
-        }
-        emitFunc(hfr.reduce)
         stream.println("))")
       }
       case foreach:Foreach => {
