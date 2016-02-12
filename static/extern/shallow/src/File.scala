@@ -1,7 +1,4 @@
-package ch.epfl
-package lamp
-package autolifter
-package library
+package LOWERCASE_DSL_NAME.shallow
 
 object ForgeFileReader {
   def readLines[A:Manifest](path: String)(f: String => A): ForgeArray[A] = {
