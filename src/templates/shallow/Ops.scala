@@ -293,8 +293,7 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
       case _ => Nil
     }
     val curriedArgs = o.curriedArgs.map(a => makeShallowArgs(a, writeIndices.map(_ - o.firstArgs.length))).mkString("")
-    val fxAnn = if (o.effect.isInstanceOf[write]) "" else fxAnnotString(o)
-    fxAnn + prefix + o.name + makeTpeParsWithBounds(o.tpePars) + makeShallowArgs(o.firstArgs, writeIndices) + curriedArgs + makeOpImplicitArgsWithOverloadWithType(o) + ret + " = "
+    prefix + o.name + makeTpeParsWithBounds(o.tpePars) + makeShallowArgs(o.firstArgs, writeIndices) + curriedArgs + makeOpImplicitArgsWithOverloadWithType(o) + ret + " = "
   }
 
 
@@ -516,14 +515,6 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     }
   }
 
-  def fxAnnotString(o: Rep[DSLOp]): String = o.effect match {
-    case `pure` => ""
-    case `mutable` => "@mutable "
-    case `simple` => "@simple "
-    case write(args @ _*) => "@write "
-    case `global` => "@global "
-  }
-
   def emitOpSyntax(opsGrp: DSLOps, stream: PrintWriter) {
     emitBlockComment("Operations", stream)
     stream.println()
@@ -639,8 +630,7 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
           val hkTpePars = if (isTpePar(tpe)) tpePars else getHkTpe(tpe).tpePars
           val otherTpePars = o.tpePars.filterNot(p => hkTpePars.map(_.name).contains(p.name))
           val ret = ": " + typifySome(o.retTpe)
-          val fxAnn = fxAnnotString(o)
-          stream.print("  " + fxAnn + prefix + " " + o.name + makeTpeParsWithBounds(otherTpePars) + otherArgs + curriedArgs
+          stream.print("  " + prefix + " " + o.name + makeTpeParsWithBounds(otherTpePars) + otherArgs + curriedArgs
             + (makeImplicitArgsWithCtxBoundsWithType(implicitArgsWithOverload(o) diff (arg("__pos",MSourceContext)), o.tpePars diff otherTpePars, without = hkTpePars)) + ret + " = ")
           emitImpl(o, stream)
         }
