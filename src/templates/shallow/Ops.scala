@@ -376,9 +376,9 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
         case List(line) => stream.print(line)
         case lines => {
           stream.println("{")
-          lines.foreach { line => emitWithIndent(line, stream, indent+4 )}
+          lines.foreach { line => emitWithIndent(line, stream, indent+2 )}
           // emitWithIndent("}", stream, indent+2)
-          stream.print((" " * (indent + 2)) + "}" )
+          stream.print((" " * indent) + "}" )
         }
       }
     }
@@ -483,14 +483,14 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
         // emitWithIndent(inline(o, quotedArg(o.args.apply(structArgIndex).name)) + "." + field + " = ", stream, indent)
         // emitFunc(value)
       case Allocates(tpe,init) =>
-        stream.print("/*allocates*/")
+        // stream.print("/*allocates*/")
         // emitOverloadShadows(o, stream, indent)
         val initialVals = init.map(i => inline(o,i, quoteLiteral)).mkString(",")
-        emitWithIndent("new " + quote(tpe) + "(" + initialVals + ")", stream, indent)
+        emitWithIndent("new " + quote(tpe) + "(" + initialVals + ")", stream, 0)
       case _ => stream.println("???")
     }
     // emitWithIndent("}", stream, indent)
-    stream.println()
+    // stream.println()
   }
 
 
@@ -540,108 +540,122 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
 
     // static ops
     // FIXME let's not consider direct methods for the moment
-    val staticOps = opsGrp.ops.filter(e=>e.style==staticMethod /*|| e.style==directMethod */|| e.style == compilerMethod)
+    val staticOps = opsGrp.ops.filter(e=>e.style==staticMethod)
     val objects = staticOps.groupBy(_.grp.name)
     for ((name, ops) <- objects) {
       stream.println("object " + name + " {")
       for (o <- ops) {
-        // stream.println("  " + makeSyntaxMethod(o))
-        if (o.style == compilerMethod)
-          // stream.print("  " + makeOpMethodSignature(o, withReturnTpe = Some(true)) + " = " )
-          stream.print("  " + makeSyntaxMethod(o, "protected def "))
-        else
-          stream.print("  " + makeSyntaxMethod(o))
+        stream.print("  " + makeSyntaxMethod(o))
         emitImpl(o, stream)
       }
       stream.println("}")
       stream.println()
     }
 
-    // infix ops
-    val allInfixOps = opsGrp.ops.filter(e=>e.style==infixMethod)
+    // // static ops
+    // // FIXME let's not consider direct methods for the moment
+    // val staticOps = opsGrp.ops.filter(e=>e.style==staticMethod /*|| e.style==directMethod */|| e.style == compilerMethod)
+    // val objects = staticOps.groupBy(_.grp.name)
+    // for ((name, ops) <- objects) {
+    //   stream.println("object " + name + " {")
+    //   for (o <- ops) {
+    //     // stream.println("  " + makeSyntaxMethod(o))
+    //     if (o.style == compilerMethod)
+    //       // stream.print("  " + makeOpMethodSignature(o, withReturnTpe = Some(true)) + " = " )
+    //       stream.print("  " + makeSyntaxMethod(o, "protected def "))
+    //     else
+    //       stream.print("  " + makeSyntaxMethod(o))
+    //     emitImpl(o, stream)
+    //   }
+    //   stream.println("}")
+    //   stream.println()
+    // }
+
+    // // infix ops
+    // val allInfixOps = opsGrp.ops.filter(e=>e.style==infixMethod)
     
-    val pimpOps = allInfixOps filter (_.args.length > 0)
-    // val pimpOps = allInfixOps
-    if (pimpOps.nonEmpty) {
-      // set up a pimp-my-library style promotion
-      // val ops = pimpOps.filterNot(o => getHkTpe(o.args.apply(0).tpe).name == "Var" ||
-      //                                  (o.args.apply(0).tpe.stage == now && pimpOps.exists(o2 => o.args.apply(0).tpe.name == o2.args.apply(0).tpe.name && o2.args.apply(0).tpe.stage == future)))
-      val ops = pimpOps filterNot { op =>
-        op.args exists { arg =>
-          getHkTpe(arg.tpe).name == "Var"
-        }
-      }
-      val tpes = ops.map(_.args.apply(0).tpe).distinct
-      def isTpePure(t: Rep[DSLType]): Boolean = t match {
-        case Def(Tpe(_, _, _)) => true
-        case _ => false
-      }
-      def getTpeName(t: Rep[DSLType]): String = t match {
-        case Def(Tpe(n, _, _)) => n
-        case Def(TpeInst(t1,_)) => getTpeName(t1)
-        case _ => quote(t)
-      }
+    // val pimpOps = allInfixOps filter (_.args.length > 0)
+    // // val pimpOps = allInfixOps
+    // if (pimpOps.nonEmpty) {
+    //   // set up a pimp-my-library style promotion
+    //   // val ops = pimpOps.filterNot(o => getHkTpe(o.args.apply(0).tpe).name == "Var" ||
+    //   //                                  (o.args.apply(0).tpe.stage == now && pimpOps.exists(o2 => o.args.apply(0).tpe.name == o2.args.apply(0).tpe.name && o2.args.apply(0).tpe.stage == future)))
+    //   val ops = pimpOps filterNot { op =>
+    //     op.args exists { arg =>
+    //       getHkTpe(arg.tpe).name == "Var"
+    //     }
+    //   }
+    //   val tpes = ops.map(_.args.apply(0).tpe).distinct
+    //   def isTpePure(t: Rep[DSLType]): Boolean = t match {
+    //     case Def(Tpe(_, _, _)) => true
+    //     case _ => false
+    //   }
+    //   def getTpeName(t: Rep[DSLType]): String = t match {
+    //     case Def(Tpe(n, _, _)) => n
+    //     case Def(TpeInst(t1,_)) => getTpeName(t1)
+    //     case _ => quote(t)
+    //   }
 
-      def getTpePars(tpe: Rep[DSLType]): List[Rep[TypePar]] = tpe match {
-        case Def(TpeInst(_,args)) => args.filter(isTpePar).asInstanceOf[List[Rep[TypePar]]]
-        case Def(TpePar(_,_,_)) => List(tpe.asInstanceOf[Rep[TypePar]])
-        case _ => tpe.tpePars
-      }
-      // first line filters out specialized types
-      val fTpes = tpes.filter(t => { isTpePure(t) /*&& !getTpePars(t).exists(a => isTpePar(a) && List("Int", "Float", "Double").contains(asTpePar(a).name) ) */} || {
-        isTpeInst(t) && (t match {case Def(TpeInst(_, args)) => args.forall(a => isTpePar(a) && asTpePar(a).name != "_")})
-        })
-      // for (tpe <- tpes) {
-      fTpes foreach { tpe =>
-        val tpePars = tpe match {
-          case Def(TpeInst(_,args)) => args.filter(isTpePar).asInstanceOf[List[Rep[TypePar]]]
-          case Def(TpePar(_,_,_)) => List(tpe.asInstanceOf[Rep[TypePar]])
-          case _ => tpe.tpePars
-        }
-        val tpeArgs = tpe match {
-          case Def(TpeInst(hk,args)) => args.filterNot(isTpePar)
-          case _ => Nil
-        }
+    //   def getTpePars(tpe: Rep[DSLType]): List[Rep[TypePar]] = tpe match {
+    //     case Def(TpeInst(_,args)) => args.filter(isTpePar).asInstanceOf[List[Rep[TypePar]]]
+    //     case Def(TpePar(_,_,_)) => List(tpe.asInstanceOf[Rep[TypePar]])
+    //     case _ => tpe.tpePars
+    //   }
+    //   // first line filters out specialized types
+    //   val fTpes = tpes.filter(t => { isTpePure(t) /*&& !getTpePars(t).exists(a => isTpePar(a) && List("Int", "Float", "Double").contains(asTpePar(a).name) ) */} || {
+    //     isTpeInst(t) && (t match {case Def(TpeInst(_, args)) => args.forall(a => isTpePar(a) && asTpePar(a).name != "_")})
+    //     })
+    //   // for (tpe <- tpes) {
+    //   fTpes foreach { tpe =>
+    //     val tpePars = tpe match {
+    //       case Def(TpeInst(_,args)) => args.filter(isTpePar).asInstanceOf[List[Rep[TypePar]]]
+    //       case Def(TpePar(_,_,_)) => List(tpe.asInstanceOf[Rep[TypePar]])
+    //       case _ => tpe.tpePars
+    //     }
+    //     val tpeArgs = tpe match {
+    //       case Def(TpeInst(hk,args)) => args.filterNot(isTpePar)
+    //       case _ => Nil
+    //     }
 
-        // val opsClsName = opsGrp.grp.name + tpeArgs.map(_.name).mkString("")
-        val opsClsName = tpe.name + makeTpeParsWithBounds(tpe.tpePars)
-        val helpClsName = opsGrp.grp.name
+    //     // val opsClsName = opsGrp.grp.name + tpeArgs.map(_.name).mkString("")
+    //     val opsClsName = tpe.name + makeTpeParsWithBounds(tpe.tpePars)
+    //     val helpClsName = opsGrp.grp.name
 
-        stream.println()
-        val fields = DataStructs.get(tpe)
-        val fieldsString = fields map (makeFieldArgs) getOrElse ""
-        val parallelCollection = ForgeCollections.get(tpe).map(c => " extends " + ( c match {
-          case p: ParallelCollection => "ParallelCollection"
-          case p: ParallelCollectionBuffer => " ParallelCollectionBuffer"
+    //     stream.println()
+    //     val fields = DataStructs.get(tpe)
+    //     val fieldsString = fields map (makeFieldArgs) getOrElse ""
+    //     val parallelCollection = ForgeCollections.get(tpe).map(c => " extends " + ( c match {
+    //       case p: ParallelCollection => "ParallelCollection"
+    //       case p: ParallelCollectionBuffer => " ParallelCollectionBuffer"
 
-          }) + "[" + quote(c.tpeArg) + "] ").getOrElse("")
-        stream.println("class " + opsClsName + "(" + fieldsString + ")" + parallelCollection + " { self => ")
-        stream.println(fields map makeFieldsWithInitArgs getOrElse "")
-        stream.println("  import " + helpClsName + "._")
+    //       }) + "[" + quote(c.tpeArg) + "] ").getOrElse("")
+    //     stream.println("class " + opsClsName + "(" + fieldsString + ")" + parallelCollection + " { self => ")
+    //     stream.println(fields map makeFieldsWithInitArgs getOrElse "")
+    //     stream.println("  import " + helpClsName + "._")
 
-        def emitOp(o: Rep[DSLOp], prefix: String = "def") {
-          val writeIndices = o.effect match {
-            case w: write => w.args.toList map (_ - 1)
-            case _ => Nil
-          }
-          val otherArgs = makeShallowArgs(o.firstArgs.drop(1), writeIndices)
-          // only works for a single curried args
-          val curriedArgs = o.curriedArgs.map(a => makeShallowArgs(a, writeIndices.map(_ - otherArgs.length))).mkString("")
-          val hkTpePars = if (isTpePar(tpe)) tpePars else getHkTpe(tpe).tpePars
-          val otherTpePars = o.tpePars.filterNot(p => hkTpePars.map(_.name).contains(p.name))
-          val ret = ": " + typifySome(o.retTpe)
-          stream.print("  " + prefix + " " + o.name + makeTpeParsWithBounds(otherTpePars) + otherArgs + curriedArgs
-            + (makeImplicitArgsWithCtxBoundsWithType(implicitArgsWithOverload(o) diff (arg("__pos",MSourceContext)), o.tpePars diff otherTpePars, without = hkTpePars)) + ret + " = ")
-          emitImpl(o, stream)
-        }
+    //     def emitOp(o: Rep[DSLOp], prefix: String = "def") {
+    //       val writeIndices = o.effect match {
+    //         case w: write => w.args.toList map (_ - 1)
+    //         case _ => Nil
+    //       }
+    //       val otherArgs = makeShallowArgs(o.firstArgs.drop(1), writeIndices)
+    //       // only works for a single curried args
+    //       val curriedArgs = o.curriedArgs.map(a => makeShallowArgs(a, writeIndices.map(_ - otherArgs.length))).mkString("")
+    //       val hkTpePars = if (isTpePar(tpe)) tpePars else getHkTpe(tpe).tpePars
+    //       val otherTpePars = o.tpePars.filterNot(p => hkTpePars.map(_.name).contains(p.name))
+    //       val ret = ": " + typifySome(o.retTpe)
+    //       stream.print("  " + prefix + " " + o.name + makeTpeParsWithBounds(otherTpePars) + otherArgs + curriedArgs
+    //         + (makeImplicitArgsWithCtxBoundsWithType(implicitArgsWithOverload(o) diff (arg("__pos",MSourceContext)), o.tpePars diff otherTpePars, without = hkTpePars)) + ret + " = ")
+    //       emitImpl(o, stream)
+    //     }
 
-        for (o <- ops if getTpeName(o.args.apply(0).tpe) == getTpeName(tpe)) {
-          emitOp(o)
-        }
-        stream.println("}")
-      }
-      stream.println()
-    }
+    //     for (o <- ops if getTpeName(o.args.apply(0).tpe) == getTpeName(tpe)) {
+    //       emitOp(o)
+    //     }
+    //     stream.println("}")
+    //   }
+    //   stream.println()
+    // }
 
   }
 }
