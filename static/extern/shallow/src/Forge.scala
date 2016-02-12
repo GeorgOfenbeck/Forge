@@ -1,7 +1,7 @@
 package LOWERCASE_DSL_NAME.shallow
 
 class ForgeExtras[T](val underlying: T) extends ForgeAny {
-	def unsafeImmutable: T = ???
+	def unsafeImmutable: T = underlying //???
 }
 
 trait ForgeAny

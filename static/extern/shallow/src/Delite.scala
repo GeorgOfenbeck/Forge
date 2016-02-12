@@ -2,9 +2,9 @@ package LOWERCASE_DSL_NAME.shallow
 
 object Delite {
   
-  def single[T](block: => T): T = ???
+  def single[T](block: => T): T = block
 
-  def composite[T](block: => T): T = ???
+  def composite[T](block: => T): T = block
 
   def map[T1,T2,R](coll: DeliteCollection[T1], func: T1 => T2): R = ???
 
