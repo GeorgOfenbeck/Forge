@@ -1,11 +1,14 @@
-package LOWERCASE_DSL_NAME.shallow
+package optiql.shallow.classes
 
-import optiql.shallow.ops._
+import optiql.shallow._
 import scala.reflect.RefinedManifest
 import Record._
 
 //TODO: this object is basically a misc. grab bag of features, but most of it should be pushed directly into Forge
 object Rewrite {
+
+  type Rep[+T] = T
+  def unit[T:Manifest](x: T) = x
 
   def groupByHackImpl[K:Manifest,V:Manifest](self: Table[V], keySelector: V => K): Table[Tuple2[K,Table[V]]] = {
     val arr = self.data.take(self.size)

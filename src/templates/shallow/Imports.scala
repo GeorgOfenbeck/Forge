@@ -10,11 +10,15 @@ trait ShallowGenImports extends ForgeCodeGenBase {
   import IR._
 
   def emitForgeLibraryImports(stream: PrintWriter) {
-    stream.println("import ch.epfl.lamp.autolifter.library._")
-    stream.println("import ch.epfl.lamp.autolifter.annotations._")
+    stream.println("import " + packageName + "._")
+    stream.println("import " + packageName + ".classes._")
+    stream.println("import Delite._")
+    stream.println("import Forge._")
     stream.println("import ForgeArray._")
     stream.println("import ForgeArrayBuffer._")
-    stream.println("import Numeric._")
+    stream.println("import ForgeHashMap._")
+    stream.println("import ForgeFileReader._")
+    stream.println("import Rewrite._")
   }
 
   def emitScalaMathImports(stream: PrintWriter) {
@@ -26,10 +30,10 @@ trait ShallowGenImports extends ForgeCodeGenBase {
   //   stream.println("import java.io.{BufferedWriter, FileWriter, PrintWriter}")
   // }
 
-  def emitScalaReflectImports(stream: PrintWriter) {
-    stream.println("import scala.tools.nsc.io._")
-    stream.println("import scala.reflect.{Manifest,SourceContext}")
-  }
+  // def emitScalaReflectImports(stream: PrintWriter) {
+  //   stream.println("import scala.tools.nsc.io._")
+  //   stream.println("import scala.reflect.{Manifest,SourceContext}")
+  // }
 
   // def emitScalaImports(stream: PrintWriter) {
   //   emitScalaIOImports(stream)

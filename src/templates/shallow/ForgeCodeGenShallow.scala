@@ -10,7 +10,7 @@ import scala.virtualization.lms.internal.{GenericFatCodegen, GenericCodegen}
 
 import core._
 
-trait ForgeCodeGenShallow extends ForgeCodeGenBackend with ShallowGenOps with ShallowGenImports with ShallowGenTypeClasses {
+trait ForgeCodeGenShallow extends ForgeCodeGenBackend with ShallowGenOps with ShallowGenImports { // with ShallowGenTypeClasses
   val IR: ForgeApplicationRunner with ForgeExp
   import IR._
 
@@ -20,7 +20,8 @@ trait ForgeCodeGenShallow extends ForgeCodeGenBackend with ShallowGenOps with Sh
   def emitDSLImplementation() {
     Directory(Path(dslDir)).createDirectory()
     // emitDSLDefinition()
-    emitOps()
+    emitClasses()
+    // emitOps()
 //    emitTypeClasses()
     // emitOverloadHack()
   }
@@ -48,16 +49,16 @@ trait ForgeCodeGenShallow extends ForgeCodeGenBackend with ShallowGenOps with Sh
     stream.println()
   }
 
-  def emitOps() {
-    val opsDir = dslDir + File.separator + "ops"
+  def emitClasses() {
+    val opsDir = dslDir + File.separator + "classes"
     Directory(Path(opsDir)).createDirectory()
 
     // 1 file per grp, includes only abstract Ops
-    for ((grp,ops) <- OpsGrp if !isTpeClass(grp) && !isTpeClassInst(grp)) {
+    for ((grp,ops) <- OpsGrp if (!isTpeClass(grp) && !isTpeClassInst(grp))) {
       checkOps(ops)
 
-      val stream = new PrintWriter(new FileWriter(opsDir+File.separator+grp.name+"Ops"+".scala"))
-      emitHeader(packageName + ".ops", stream)
+      val stream = new PrintWriter(new FileWriter(opsDir+File.separator+grp.name+".scala"))
+      emitHeader(packageName + ".classes", stream)
       // if (Lifts.contains(grp)) {
       //   emitLifts(grp, Lifts(grp), stream)
       //   stream.println()
@@ -75,6 +76,34 @@ trait ForgeCodeGenShallow extends ForgeCodeGenBackend with ShallowGenOps with Sh
     //   stream.close()
     // }
   }
+
+  // def emitOps() {
+  //   val opsDir = dslDir + File.separator + "ops"
+  //   Directory(Path(opsDir)).createDirectory()
+
+  //   // 1 file per grp, includes only abstract Ops
+  //   for ((grp,ops) <- OpsGrp if !isTpeClass(grp) && !isTpeClassInst(grp)) {
+  //     checkOps(ops)
+
+  //     val stream = new PrintWriter(new FileWriter(opsDir+File.separator+grp.name+"Ops"+".scala"))
+  //     emitHeader(packageName + ".ops", stream)
+  //     // if (Lifts.contains(grp)) {
+  //     //   emitLifts(grp, Lifts(grp), stream)
+  //     //   stream.println()
+  //     // }
+  //     emitOpSyntax(ops, stream)
+  //     stream.close()
+  //   }
+
+  //   // emit any lifts that did not have a corresponding ops
+  //   // for ((grp,a) <- Lifts.filterNot(p => OpsGrp.contains(p._1))) {
+  //   //   val stream = new PrintWriter(new FileWriter(opsDir+File.separator+"Lift"+grp.name+".scala"))
+  //   //   emitHeader(packageName + ".ops", stream)
+  //   //   emitLifts(grp, Lifts(grp), stream)
+  //   //   stream.println()
+  //   //   stream.close()
+  //   // }
+  // }
 
 //  def emitTypeClasses() {
 //    val typeClassDir = dslDir + File.separator + "typeclass"
