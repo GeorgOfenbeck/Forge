@@ -133,28 +133,6 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     if (clashes.length > 1) (clashes.indexOf(o)+1).toString else ""
   }
 
-  // refers to the back-end method signature
-  // front-end overloads are added in an ad-hoc way right now, by always calling implicitArgsWithOverload
-  def needOverload(o: Rep[DSLOp]) = {
-    /*!Config.fastCompile &&*/ (!Labels.contains(o) && nameClashesGrp(o).length > 1)
-  }
-
-  // useCanonical should be false if we're referring to the front-end signature (e.g. '+') but true if we're
-  // referring to the back-end signature (e.g. 'vector_plus')
-  def implicitArgsWithOverload(o: Rep[DSLOp], useCanonical: Boolean = false) = {
-    // SHALLOW
-    // val o1 = if (useCanonical) canonical(o) else o
-    // val i = nameClashId(o1)
-    // if (i != "") {
-    //   // redirect overloads can clash with regular overloads since they don't get separate abstract methods
-    //   val overloadName = if (isRedirect(o)) "ROverload" else "Overload"
-    //   o.implicitArgs :+ anyToImplicitArg(ephemeralTpe(overloadName + i, stage = now), o.implicitArgs.length)
-    // }
-    // else {
-      o.implicitArgs diff (arg("__pos",MSourceContext))
-    // }
-  }
-
 
   /**
    * Op argument formatting
@@ -204,7 +182,7 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
 
   def makeFullArgs(o: Rep[DSLOp], makeArgs: Rep[DSLOp] => String) = {
     // we always pass implicit arguments explicitly (in practice, less issues arise this way)
-    val implicitArgs = if (needOverload(o)) makeOpImplicitArgsWithOverload(o, useCanonical = true) else makeOpImplicitArgs(o)
+    val implicitArgs = makeOpImplicitArgs(o)
     makeTpePars(o.tpePars) + makeArgs(o) + implicitArgs
   }
 
@@ -215,22 +193,40 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
 
   // untyped implicit args
   def makeImplicitCtxBounds(tpePars: List[Rep[TypePar]]) = {
-    tpePars.flatMap(a => a.ctxBounds.map(b => "implicitly["+b.name+"["+quote(a)+"]]")).mkString(",")
+    tpePars.flatMap{ a =>
+      a.ctxBounds.map(b => "implicitly["+b.name+"["+quote(a)+"]]")
+    }.mkString(",")
   }
 
-  def makeOpImplicitCtxBounds(o: Rep[DSLOp]) = makeImplicitCtxBounds(o.tpePars)
+  // // def makeOpImplicitCtxBounds(o: Rep[DSLOp]) = makeImplicitCtxBounds(o.tpePars)
 
-  def makeImplicitArgs(implicitArgs: List[Rep[DSLArg]], ctxBoundsStr: String = "") = {
-    // ctxBounds must come before regular implicits
-    val implArgs = implicitArgs diff (arg("__pos",MSourceContext))
+  // def makeImplicitArgs(implicitArgs: List[Rep[DSLArg]], ctxBoundsStr: String = "") = {
+  //   // ctxBounds must come before regular implicits
+  //   val implArgs = implicitArgs diff (arg("__pos",MSourceContext))
+  //   val ctxBounds2 = if (ctxBoundsStr == "") "" else ctxBoundsStr+","
+  //   if (implArgs.length > 0) "(" + ctxBounds2 + implArgs.map(quote).mkString(",") + ")"
+  //   else ""
+  // }
+
+  def makeImplicitArgs(tpePars: List[Rep[TypePar]], implicitArgs: List[Rep[DSLArg]]) = {
+    // val hkInstantiations = getHkTpeParInstantiations(tpePars, args, implicitArgs)
+
+    // passing order is: regular ctxBounds, then regular implicits, and finally hkInstantiations context bounds
+    val ctxBoundsStr = makeImplicitCtxBounds(tpePars)
     val ctxBounds2 = if (ctxBoundsStr == "") "" else ctxBoundsStr+","
-    if (implArgs.length > 0) "(" + ctxBounds2 + implArgs.map(quote).mkString(",") + ")"
+    val allImplicitArgs = implicitArgs//.filter(_.name != "__pos") //++ hkInstantiations
+    if (allImplicitArgs.length > 0) "(" + ctxBounds2 + allImplicitArgs.map(quote).mkString(",") + ")"
     else ""
   }
 
-  def makeOpImplicitArgs(o: Rep[DSLOp]) = makeImplicitArgs(o.implicitArgs, makeOpImplicitCtxBounds(o)) // explicitly passing implicits requires passing ctxBounds, too
 
-  def makeOpImplicitArgsWithOverload(o: Rep[DSLOp], asVals: Boolean = false, useCanonical: Boolean = false) = makeImplicitArgs(implicitArgsWithOverload(o, useCanonical), makeOpImplicitCtxBounds(o))
+  def makeOpImplicitArgs(o: Rep[DSLOp]) = {
+    makeImplicitArgs(o.tpePars, o.implicitArgs)
+  }
+
+  // def makeOpImplicitArgs(o: Rep[DSLOp]) = 
+  //   makeImplicitArgs(o.implicitArgs, makeImplicitCtxBounds(o.tpePars)) 
+  // // explicitly passing implicits requires passing ctxBounds, too
 
   // typed implicit args with context bounds (only needed for instance methods)
   // 'without' is used to subtract bounds that are already in scope
@@ -254,9 +250,6 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
   }
 
   def makeOpImplicitArgsWithType(o: Rep[DSLOp], asVals: Boolean = false) = makeImplicitArgsWithType(o.implicitArgs, asVals)
-
-  def makeOpImplicitArgsWithOverloadWithType(o: Rep[DSLOp], asVals: Boolean = false, useCanonical: Boolean = false) = makeImplicitArgsWithType(implicitArgsWithOverload(o, useCanonical), asVals)
-
 
   /**
    * Op method names
@@ -283,17 +276,18 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     })
   }
 
+  def makeOpMethodNameWithArgs(o: Rep[DSLOp]) = makeOpMethodName(o) + makeFullArgs(o, o => makeOpArgs(o))
+
   def makeSyntaxMethod(o: Rep[DSLOp], prefix: String = "def ", withReturnTpe: Option[Boolean] = None) = {
     // adding the return type increases verbosity in the generated code, so we omit it by default
     // val addRet = withReturnTpe.getOrElse(Config.fastCompile)
     // val ret = if (addRet || isRedirect(o)) ": " + repifySome(o.retTpe) else ""
     val ret = ": " + typifySome(o.retTpe)
-    val writeIndices = o.effect match {
-      case w: write => w.args.toList
-      case _ => Nil
-    }
-    val curriedArgs = o.curriedArgs.map(a => makeShallowArgs(a, writeIndices.map(_ - o.firstArgs.length))).mkString("")
-    prefix + o.name + makeTpeParsWithBounds(o.tpePars) + makeShallowArgs(o.firstArgs, writeIndices) + curriedArgs + makeOpImplicitArgsWithOverloadWithType(o) + ret + " = "
+    val curriedArgs = o.curriedArgs.map(a => makeArgsWithNowType(a)).mkString("")
+    prefix + o.name + makeTpeParsWithBounds(o.tpePars) +
+    makeArgsWithNowType(o.firstArgs) + curriedArgs + makeOpImplicitArgsWithType(o) +
+    ret + " = " +
+    makeOpMethodNameWithArgs(o)
   }
 
 
@@ -365,133 +359,130 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     }
   }
 
-  def emitImpl(o: Rep[DSLOp], stream: PrintWriter) {
-    val indent = 2
-    // val ret = typifySome(o.retTpe)
-    // emitWithIndent("{", stream, indent)
-    def tpeParser(prod: Product): String = 
-      makeTpePars(prod.productIterator.toList.asInstanceOf[List[Rep[DSLType]]]/*.filter(isTpePar)*/.:+(o.retTpe).asInstanceOf[List[Rep[TypePar]]])
-    def emitFunc(func: Rep[String]) {
-      inline(o, func, quoteLiteral).split(nl).toList match {
-        case List(line) => stream.print(line)
-        case lines => {
-          stream.println("{")
-          lines.foreach { line => emitWithIndent(line, stream, indent+2 )}
-          // emitWithIndent("}", stream, indent+2)
-          stream.print((" " * indent) + "}" )
-        }
-      }
-    }
-    // stream.print("{ ")
-    Impls(o) match {
-      case single:SingleTask => {
-        stream.print("Delite.single(")
-        // inline(o, single.func, quoteLiteral).split(nl).foreach { line => emitWithIndent(line, stream, indent+4 )}
-        emitFunc(single.func)
-        // emitWithIndent(")", stream, indent+2)
-        stream.println(")")
-      }
-      case composite:Composite => {
-        stream.print("Delite.composite(")
-        // inline(o, composite.func, quoteLiteral).split(nl).foreach { line => emitWithIndent(line, stream, indent+4 )}
-        emitFunc(composite.func)
-        // emitWithIndent(")", stream, indent+2)
-        stream.println(")")
-      }
-      case map:Map => {
-        val in = o.args.apply(map.argIndex).name
-        val tpePars = tpeParser(map.tpePars)
-        stream.print("Delite.map" + tpePars + "(" + in + ", (")
-        // inline(o, map.func, quoteLiteral).split(nl).foreach { line => emitWithIndent(line, stream, indent+4 )}
-        emitFunc(map.func)
-        // emitWithIndent(")", stream, indent+2)
-        stream.println("))")
-      }
-      case zip:Zip => {
-        val inA = o.args.apply(zip.argIndices._1).name
-        val inB = o.args.apply(zip.argIndices._2).name
-        val tpePars = tpeParser(zip.tpePars)
-        stream.print("Delite.zip" + tpePars + "(" + inA + ", " + inB + ", (")
-        // inline(o, zip.func, quoteLiteral).split(nl).foreach { line => emitWithIndent(line, stream, indent+4 )}
-        emitFunc(zip.func)
-        // emitWithIndent(")", stream, indent+2)
-        stream.println("))")
-      }
-      case reduce:Reduce => {
-        val c = o.args.apply(reduce.argIndex).name
-        val tpePars = "[" + quote(reduce.tpePar) + "]"
-        stream.print("Delite.reduce" + tpePars + "(" + c + ", (")
-        emitFunc(reduce.zero)
-        stream.print("), (")
-        emitFunc(reduce.func)
-        stream.println("))")
-      }
-      case mapreduce:MapReduce => {
-        val c = o.args.apply(mapreduce.argIndex).name
-        val tpePars = tpeParser(mapreduce.tpePars)
-        stream.print("Delite.mapReduce" + tpePars + "(" + c + ", (")
-        emitFunc(mapreduce.map)
-        stream.print("), (")
-        emitFunc(mapreduce.zero)
-        stream.print("), (")
-        emitFunc(mapreduce.reduce)
-        stream.println("))")
-      }
-      case filter:Filter => {
-        val in = o.args.apply(filter.argIndex).name
-        val tpePars = tpeParser(filter.tpePars)
-        stream.print("Delite.filter" + tpePars + "(" + in + ", (")
-        emitFunc(filter.cond)
-        stream.print("), (")
-        emitFunc(filter.func)
-        stream.println("))")
-      }
-      case foreach:Foreach => {
-        val c = o.args.apply(foreach.argIndex).name
-        val tpePars = "[" + quote(foreach.tpePar) + "]"
-        stream.print("Delite.foreach" + tpePars + "(" + c + ", (")
-        emitFunc(foreach.func)
-        stream.println("))")
-      }
-      case redirect:Redirect => {
-        stream.print("/*redirect*/")
-        emitFunc(redirect.func)
-      }
-      case codegen:CodeGen =>
-        stream.print("/*codegen*/")
-        val rule = codegen.decls.getOrElse($cala, err("could not find Scala codegen rule for op: " + o.name))
-        // inline(o, rule.decl, quoteLiteral).split(nl).foreach { line => emitWithIndent(line, stream, indent) }
-        emitFunc(rule.decl)
-      case Getter(structArgIndex,field) =>
-        // stream.print("/*getter*/")
-        val c = o.args.apply(structArgIndex).name
-        stream.print("Forge.getter" + "(" + c + ", " + c + ".")
-        emitFunc(field)
-        stream.println(")")
-        // emitOverloadShadows(o, stream, indent)
-        // emitWithIndent(inline(o, quotedArg(o.args.apply(structArgIndex).name)) + "." + field, stream, indent)
-      case Setter(structArgIndex,field,value) =>
-        // stream.print("/*setter*/")
-        val c = o.args.apply(structArgIndex).name
-        stream.print("Forge.setter" + "(" + c + ", " + c + ".")
-        emitFunc(field)
-        stream.print(", ")
-        emitFunc(value)
-        stream.println(")")
-        // emitOverloadShadows(o, stream, indent)
-        // emitWithIndent(inline(o, quotedArg(o.args.apply(structArgIndex).name)) + "." + field + " = " + inline(o,value), stream, indent)
-        // emitWithIndent(inline(o, quotedArg(o.args.apply(structArgIndex).name)) + "." + field + " = ", stream, indent)
-        // emitFunc(value)
-      case Allocates(tpe,init) =>
-        // stream.print("/*allocates*/")
-        // emitOverloadShadows(o, stream, indent)
-        val initialVals = init.map(i => inline(o,i, quoteLiteral)).mkString(",")
-        emitWithIndent("new " + quote(tpe) + "(" + initialVals + ")", stream, 0)
-      case _ => stream.println("???")
-    }
-    // emitWithIndent("}", stream, indent)
-    // stream.println()
-  }
+  // def emitImpl(o: Rep[DSLOp], stream: PrintWriter) {
+  //   val indent = 2
+  //   // val ret = typifySome(o.retTpe)
+  //   // emitWithIndent("{", stream, indent)
+  //   def tpeParser(prod: Product): String = 
+  //     makeTpePars(prod.productIterator.toList.asInstanceOf[List[Rep[DSLType]]]/*.filter(isTpePar)*/.:+(o.retTpe).asInstanceOf[List[Rep[TypePar]]])
+  //   def emitFunc(func: Rep[String]) {
+  //     inline(o, func, quoteLiteral).split(nl).toList match {
+  //       case List(line) => stream.print(line)
+  //       case lines => {
+  //         stream.println("{")
+  //         lines.foreach { line => emitWithIndent(line, stream, indent+2 )}
+  //         // emitWithIndent("}", stream, indent+2)
+  //         stream.print((" " * indent) + "}" )
+  //       }
+  //     }
+  //   }
+  //   // stream.print("{ ")
+  //   Impls(o) match {
+  //     case single:SingleTask => {
+  //       stream.print("Delite.single(")
+  //       // inline(o, single.func, quoteLiteral).split(nl).foreach { line => emitWithIndent(line, stream, indent+4 )}
+  //       emitFunc(single.func)
+  //       // emitWithIndent(")", stream, indent+2)
+  //       stream.println(")")
+  //     }
+  //     case composite:Composite => {
+  //       stream.print("Delite.composite(")
+  //       // inline(o, composite.func, quoteLiteral).split(nl).foreach { line => emitWithIndent(line, stream, indent+4 )}
+  //       emitFunc(composite.func)
+  //       // emitWithIndent(")", stream, indent+2)
+  //       stream.println(")")
+  //     }
+  //     case map:Map => {
+  //       val in = o.args.apply(map.argIndex).name
+  //       val tpePars = tpeParser(map.tpePars)
+  //       stream.print("Delite.map" + tpePars + "(" + in + ", (")
+  //       // inline(o, map.func, quoteLiteral).split(nl).foreach { line => emitWithIndent(line, stream, indent+4 )}
+  //       emitFunc(map.func)
+  //       // emitWithIndent(")", stream, indent+2)
+  //       stream.println("))")
+  //     }
+  //     case zip:Zip => {
+  //       val inA = o.args.apply(zip.argIndices._1).name
+  //       val inB = o.args.apply(zip.argIndices._2).name
+  //       val tpePars = tpeParser(zip.tpePars)
+  //       stream.print("Delite.zip" + tpePars + "(" + inA + ", " + inB + ", (")
+  //       // inline(o, zip.func, quoteLiteral).split(nl).foreach { line => emitWithIndent(line, stream, indent+4 )}
+  //       emitFunc(zip.func)
+  //       // emitWithIndent(")", stream, indent+2)
+  //       stream.println("))")
+  //     }
+  //     case reduce:Reduce => {
+  //       val c = o.args.apply(reduce.argIndex).name
+  //       val tpePars = "[" + quote(reduce.tpePar) + "]"
+  //       stream.print("Delite.reduce" + tpePars + "(" + c + ", (")
+  //       emitFunc(reduce.zero)
+  //       stream.print("), (")
+  //       emitFunc(reduce.func)
+  //       stream.println("))")
+  //     }
+  //     case mapreduce:MapReduce => {
+  //       val c = o.args.apply(mapreduce.argIndex).name
+  //       val tpePars = tpeParser(mapreduce.tpePars)
+  //       stream.print("Delite.mapReduce" + tpePars + "(" + c + ", (")
+  //       emitFunc(mapreduce.map)
+  //       stream.print("), (")
+  //       emitFunc(mapreduce.zero)
+  //       stream.print("), (")
+  //       emitFunc(mapreduce.reduce)
+  //       stream.println("))")
+  //     }
+  //     case filter:Filter => {
+  //       val in = o.args.apply(filter.argIndex).name
+  //       val tpePars = tpeParser(filter.tpePars)
+  //       stream.print("Delite.filter" + tpePars + "(" + in + ", (")
+  //       emitFunc(filter.cond)
+  //       stream.print("), (")
+  //       emitFunc(filter.func)
+  //       stream.println("))")
+  //     }
+  //     case foreach:Foreach => {
+  //       val c = o.args.apply(foreach.argIndex).name
+  //       val tpePars = "[" + quote(foreach.tpePar) + "]"
+  //       stream.print("Delite.foreach" + tpePars + "(" + c + ", (")
+  //       emitFunc(foreach.func)
+  //       stream.println("))")
+  //     }
+  //     case redirect:Redirect => {
+  //       stream.print("/*redirect*/")
+  //       emitFunc(redirect.func)
+  //     }
+  //     case codegen:CodeGen =>
+  //       stream.print("/*codegen*/")
+  //       val rule = codegen.decls.getOrElse($cala, err("could not find Scala codegen rule for op: " + o.name))
+  //       // inline(o, rule.decl, quoteLiteral).split(nl).foreach { line => emitWithIndent(line, stream, indent) }
+  //       emitFunc(rule.decl)
+  //     case Getter(structArgIndex,field) =>
+  //       // stream.print("/*getter*/")
+  //       val c = o.args.apply(structArgIndex).name
+  //       stream.print("Forge.getter" + "(" + c + ", " + c + ".")
+  //       emitFunc(field)
+  //       stream.println(")")
+  //       // emitWithIndent(inline(o, quotedArg(o.args.apply(structArgIndex).name)) + "." + field, stream, indent)
+  //     case Setter(structArgIndex,field,value) =>
+  //       // stream.print("/*setter*/")
+  //       val c = o.args.apply(structArgIndex).name
+  //       stream.print("Forge.setter" + "(" + c + ", " + c + ".")
+  //       emitFunc(field)
+  //       stream.print(", ")
+  //       emitFunc(value)
+  //       stream.println(")")
+  //       // emitWithIndent(inline(o, quotedArg(o.args.apply(structArgIndex).name)) + "." + field + " = " + inline(o,value), stream, indent)
+  //       // emitWithIndent(inline(o, quotedArg(o.args.apply(structArgIndex).name)) + "." + field + " = ", stream, indent)
+  //       // emitFunc(value)
+  //     case Allocates(tpe,init) =>
+  //       // stream.print("/*allocates*/")
+  //       val initialVals = init.map(i => inline(o,i, quoteLiteral)).mkString(",")
+  //       emitWithIndent("new " + quote(tpe) + "(" + initialVals + ")", stream, 0)
+  //     case _ => stream.println("???")
+  //   }
+  //   // emitWithIndent("}", stream, indent)
+  //   // stream.println()
+  // }
 
 
   /**
@@ -500,19 +491,6 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
 
   def checkOps(opsGrp: DSLOps) {
     for (o <- unique(opsGrp.ops)) check(o)
-  }
-
-  // certain ops (e.g. "apply" cannot be expressed with infix notation right now), so we use implicits as a workaround
-  def noInfix(o: Rep[DSLOp]) = {
-    if (Config.fastCompile) {
-      // default implicit mode (appears empirically slightly faster than infix)
-      (!mustInfixList.contains(o.name)) && o.args.length > 0
-    }
-    else {
-      // default infix mode (slightly easier to understand what's happening, also fails to apply less than implicits)
-      // blacklist or curried args or function args (in the latter two cases, infix doesn't always resolve correctly)
-      noInfixList.contains(o.name) || o.curriedArgs.length > 0 || hasFuncArgs(o) || o.args.size > 0
-    }
   }
 
   def emitOpSyntax(opsGrp: DSLOps, stream: PrintWriter) {
@@ -545,8 +523,8 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
     for ((name, ops) <- objects) {
       stream.println("object " + name + " {")
       for (o <- ops) {
-        stream.print("  " + makeSyntaxMethod(o))
-        emitImpl(o, stream)
+        stream.println("  " + makeSyntaxMethod(o))
+        // emitImpl(o, stream)
       }
       stream.println("}")
       stream.println()
