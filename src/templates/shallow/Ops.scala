@@ -639,7 +639,7 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
         emitWithIndent("def map: " + repify(gbr.tpePars._1) + " => " + repify(gbr.tpePars._3) + " = " + inline(o, gbr.map), stream, indent+2)
         emitWithIndent("def reduce: (" + repify(gbr.tpePars._3) + "," + repify(gbr.tpePars._3) + ") => " + repify(gbr.tpePars._3) + " = " + inline(o, gbr.reduce), stream, indent+2)
         emitWithIndent("val in = " + in.name, stream, indent+2)
-        emitWithIndent("val out = SHashMap["+quote(gbr.tpePars._2)+","+quote(gbr.tpePars._3)+"]()", stream, indent+2)
+        emitWithIndent("val out = new SHashMap["+quote(gbr.tpePars._2)+","+quote(gbr.tpePars._3)+"]()", stream, indent+2)
         emitWithIndent("var i = 0", stream, indent+2)
         emitWithIndent("while (i < " + makeOpMethodName(inDc.size) + "(in)"  + ") {", stream, indent+2)
         emitWithIndent("val e = " + makeOpMethodName(inDc.apply) + "(in, i)", stream, indent+4)
@@ -815,35 +815,42 @@ trait ShallowGenOps extends ForgeCodeGenBase with BaseGenDataStructures {
       // set up a pimp-my-library style promotion
       val ops = pimpOps.filterNot(o => getHkTpe(o.args.apply(0).tpe).name == "Var" ||
                                        (o.args.apply(0).tpe.stage == now && pimpOps.exists(o2 => o.args.apply(0).tpe.name == o2.args.apply(0).tpe.name && o2.args.apply(0).tpe.stage == future)))
-      val tpes = ops.map(_.args.apply(0).tpe).distinct
-      for (tpe <- tpes) {
-        val tpePars = tpe match {
+      val classTpes = ops.map(_.args.apply(0).tpe).distinct
+      for (classTpe <- classTpes) {
+        val tpePars = classTpe match {
           case Def(TpeInst(_,args)) => args.filter(isTpePar).asInstanceOf[List[Rep[TypePar]]]
-          case Def(TpePar(_,_,_)) => List(tpe.asInstanceOf[Rep[TypePar]])
-          case _ => tpe.tpePars
+          case Def(TpePar(_,_,_)) => List(classTpe.asInstanceOf[Rep[TypePar]])
+          case _ => classTpe.tpePars
         }
-        val tpeArgs = tpe match {
+        val tpeArgs = classTpe match {
           case Def(TpeInst(hk,args)) => args.filterNot(isTpePar)
           case _ => Nil
         }
 
-        val className = tpe.name
-        val fields = DataStructs.get(tpe)
-        val fieldsString = fields map (makeFieldArgs) getOrElse ""
-        stream.println("class " + className + makeTpeParsWithBounds(tpe.tpePars) + "(" + fieldsString + ")" + " { self => ")
-        stream.println(fields map (makeFieldsWithInitArgs) getOrElse "")
-        val objectName = tpe.name //opsGrp.grp.name
+        val className = classTpe.name
+        val dataStruct: Option[Exp[DSLData]] = DataStructs.get(classTpe)
+        val fieldArgsString = dataStruct map makeFieldArgs getOrElse "" // can apply map to Option - returns result or None
+        stream.println("class " + className + makeTpeParsWithBounds(classTpe.tpePars) + "(" + fieldArgsString + ")" + " { self => ")
+        stream.println(dataStruct map (makeFieldsWithInitArgs) getOrElse "")
+        val objectName = classTpe.name //opsGrp.grp.name
         stream.println("  import " + objectName + "._")
 
-        for (o <- ops if quote(o.args.apply(0).tpe) == quote(tpe)) {
+        // println()
+        // println(className)
+        for (o <- ops if quote(o.args.apply(0).tpe) == quote(classTpe)){// && !(!dataStruct.isEmpty && dataStruct.get.fields.contains((o.name, tpe(o.retTpe))))){
           // stream.println("  " + makeSyntaxMethod(o))
-          val otherArgs = makeArgsWithNowType(o.firstArgs.drop(1), o.effect != pure || o.name == "apply")
-          val curriedArgs = o.curriedArgs.map(a => makeArgsWithNowType(a)).mkString("")
-          val otherTpePars = o.tpePars.filterNot(p => tpePars.map(_.name).contains(p.name))
-          val ret = if (Config.fastCompile) ": " + typifySome(o.retTpe) else ""
-          stream.println("  def " + o.name + makeTpeParsWithBounds(otherTpePars) + otherArgs + curriedArgs
-            + (makeImplicitArgsWithCtxBoundsWithType(o.tpePars diff otherTpePars, o.args, o.implicitArgs, without = tpePars)) + ret + " = " + makeOpMethodNameWithArgs(o))
+          // println(o.name + " "*(20-o.name.length) + o.args.length + "    " + o.args.map(x => (x.name,x.tpe.name)))
+          // if there's an op with no arguments (only 1), same name and type as a field, skip it to avoid clash
+          if (o.args.length > 1 || dataStruct.isEmpty || (o.args.length == 1 && !dataStruct.get.fields.contains((o.name, tpe(o.retTpe.name))))) {
+            val otherArgs = makeArgsWithNowType(o.firstArgs.drop(1), o.effect != pure || o.name == "apply")
+            val curriedArgs = o.curriedArgs.map(a => makeArgsWithNowType(a)).mkString("")
+            val otherTpePars = o.tpePars.filterNot(p => tpePars.map(_.name).contains(p.name))
+            val ret = if (Config.fastCompile) ": " + typifySome(o.retTpe) else ""
+            stream.println("  def " + o.name + makeTpeParsWithBounds(otherTpePars) + otherArgs + curriedArgs
+              + (makeImplicitArgsWithCtxBoundsWithType(o.tpePars diff otherTpePars, o.args, o.implicitArgs, without = tpePars)) + ret + " = " + makeOpMethodNameWithArgs(o))
+          }
         }
+        // println()
         stream.println("}")
         stream.println()
       }
