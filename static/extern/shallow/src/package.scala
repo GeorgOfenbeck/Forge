@@ -7,6 +7,7 @@ package object shallow /* extends FractionalImplicits */ {
   type SHashMap[K,V] = scala.collection.mutable.HashMap[K,V]
   type SByteBuffer = java.nio.ByteBuffer
   type FString = String
+  type Tup2[A,B] = scala.Tuple2[A,B] // TODO fix general Tup - Tuple translation in shallow
 
   class FractionalOps[T: Fractional](lhs: T){
     def /(rhs: T) = implicitly[Fractional[T]].div(lhs, rhs)
