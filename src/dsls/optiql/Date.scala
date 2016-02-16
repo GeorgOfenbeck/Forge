@@ -15,7 +15,7 @@ trait DateOps {
     static (Date) ("apply", Nil, MInt :: Date) implements allocates (Date, ${$0})
 
     static (Date) ("apply", Nil, MString :: Date) implements single ${
-      val tokens = $0.fsplit("-")
+      val tokens = $0.split("-")
       val year = tokens(0).toInt
       val month = tokens(1).toInt
       val day = tokens(2).toInt
