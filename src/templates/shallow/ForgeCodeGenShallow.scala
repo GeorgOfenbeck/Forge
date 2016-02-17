@@ -17,6 +17,28 @@ trait ForgeCodeGenShallow extends ForgeCodeGenBackend with ShallowGenOps with Sh
   // lazy val dslStream = new PrintWriter(new FileWriter(dslDir+"Frontend.scala"))
   lazy val targetName = "shallow"
 
+  val scalaGrpBlacklist = List(
+      "Primitive",
+      "Misc",
+      "Cast",
+      "Numeric",
+      "Fractional",
+      "Ordering",
+      "FString",
+      "Math",
+      "SHashMap",
+      "SByteBuffer",
+      "CHashMap",
+      "Tup2",
+      "Tup3",
+      "Tup4",
+      "Tup5",
+      "Tup6",
+      "Tup7",
+      "Tup8",
+      "Tup9"
+    ) //++ (for (arity <- (2 until maxTuples)) yield "Tup"+arity)
+
   def emitDSLImplementation() {
     Directory(Path(dslDir)).createDirectory()
     // emitDSLDefinition()
@@ -54,7 +76,7 @@ trait ForgeCodeGenShallow extends ForgeCodeGenBackend with ShallowGenOps with Sh
     Directory(Path(opsDir)).createDirectory()
 
     // 1 file per grp, includes only abstract Ops
-    for ((grp,ops) <- OpsGrp if (!isTpeClass(grp) && !isTpeClassInst(grp))) {
+    for ((grp,ops) <- OpsGrp if (!isTpeClass(grp) && !isTpeClassInst(grp) && !scalaGrpBlacklist.contains(grp.name))) {
       checkOps(ops)
 
       val stream = new PrintWriter(new FileWriter(opsDir+File.separator+grp.name+".scala"))
