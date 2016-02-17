@@ -5,7 +5,7 @@ from sys import argv
 
 import delitecommon
 
-comps = ['apps','extern','shared','library','compiler']
+comps = ['apps','extern','shared','library','compiler', 'shallow']
 
 ## a forwarder to the delitec script in DELITE_HOME with neccesary classpaths for this forge-generated DSL
 def main():

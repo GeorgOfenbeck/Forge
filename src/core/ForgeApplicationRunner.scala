@@ -99,12 +99,13 @@ trait ForgeApplicationRunner extends ForgeApplication with ForgeExp {
 
     var codeGenerators: List[ForgeCodeGenBackend{val IR: ForgeApplicationRunner.this.type; val buildDir: String}] = List(sharedCodegen)
     if (Config.genLib) codeGenerators :+= libraryCodegen
-    // if (Config.genDelite) codeGenerators :+= deliteCodegen
-    // if (Config.genIdent) codeGenerators :+= identCodegen
+    if (Config.genDelite) codeGenerators :+= deliteCodegen
+    if (Config.genIdent) codeGenerators :+= identCodegen
     if (Config.genShallow) codeGenerators :+= shallowCodegen
 
     for (c <- codeGenerators) {
       c.emitDSLImplementation()
+      // if shallow codegen - delete scala
     }
 
     info("DSL generation complete. Please run publish and compile the generated files against Delite to check for errors.")
