@@ -1,6 +1,3 @@
-// import optiql.compiler._
-import optiql.shared._
-import optiql.library._
 import optiql.shallow._
 import optiql.shallow.classes._
 import ppl.tests.scalatest._
@@ -11,7 +8,7 @@ import ForgeArrayBuffer._
 import ForgeHashMap._
 import Numeric._
 import Rewrite._
-import records.Rec
+// import records.Rec
 import optiql.shallow.classes.Table._
 
 
@@ -24,12 +21,18 @@ trait TestRec {
   //   val status: Char
   // }
 
-  def Item(_id: Int, _quantity: Int, _price: Double, _status: Char) = Rec (
-    "id"   -> _id,
-    "quantity" -> _quantity,
-    "price" -> _price,
-    "status" -> _status
-  )
+  // def Item(_id: Int, _quantity: Int, _price: Double, _status: Char) = Rec (
+  //   "id"   -> _id,
+  //   "quantity" -> _quantity,
+  //   "price" -> _price,
+  //   "status" -> _status
+  // )
+  def Item(_id: Int, _quantity: Int, _price: Double, _status: Char) = new {
+    val id = _id
+    val quantity = _quantity
+    val price = _price
+    val status = _status
+  }
 
   // def Item(_id: Int, _quantity: Int, _price: Double, _status: Char) = new Record {
   //   val id = _id
@@ -64,10 +67,14 @@ object QueryableSelectRunnerS extends ForgeTestRunnerShallow with TestRec {
       collect(scalarResult(i) == i)
     }
 
-    val recordResult = items Select(item => Rec (
-      "id" -> item.id,
-      "maxRevenue" -> item.quantity * item.price
-    ))
+    // val recordResult = items Select(item => Rec (
+    //   "id" -> item.id,
+    //   "maxRevenue" -> item.quantity * item.price
+    // ))
+    val recordResult = items Select(item => new {
+      val id = item.id
+      val maxRevenue = item.quantity * item.price
+    })
 
     collect(recordResult.size == itemsSize)
     for (i <- 0 until itemsSize) {
@@ -85,10 +92,14 @@ object QueryableSelectRunnerS extends ForgeTestRunnerShallow with TestRec {
 object QueryableWhereRunnerS extends ForgeTestRunnerShallow with TestRec {
 
   def main() = {
-    val result = items Where(_.status == 'N') Select(item => Rec (
-      "id" -> item.id,
-      "maxRevenue" -> item.quantity * item.price
-    ))
+    // val result = items Where(_.status == 'N') Select(item => Rec (
+    //   "id" -> item.id,
+    //   "maxRevenue" -> item.quantity * item.price
+    // ))
+    val result = items Where(_.status == 'N') Select(item => new {
+      val id = item.id
+      val maxRevenue = item.quantity * item.price
+    })
 
     collect(result.size == 2)
 
@@ -123,24 +134,37 @@ object QueryableReduceRunnerS extends ForgeTestRunnerShallow with TestRec {
 
 object QueryableGroupByReduceRunnerS extends ForgeTestRunnerShallow with TestRec {
   def main() = {
-    val res1 = items GroupBy(_.status) Select(g => Rec (
-      "status" -> g._1,
-      "sumQuantity" -> g._2.Sum(_.quantity),
-      "minPrice" -> g._2.Min(_.price),
-      "count" -> g._2.Count
-    ))
+    // val res1 = items GroupBy(_.status) Select(g => Rec (
+    //   "status" -> g._1,
+    //   "sumQuantity" -> g._2.Sum(_.quantity),
+    //   "minPrice" -> g._2.Min(_.price),
+    //   "count" -> g._2.Count
+    // ))
+    val res1 = items GroupBy(_.status) Select(g => new {
+      val status = g._1
+      val sumQuantity = g._2.Sum(_.quantity)
+      val minPrice = g._2.Min(_.price)
+      val count = g._2.Count
+    })
     collect(res1.size == 3)
     collect(res1(0).status == 'N' && res1(0).sumQuantity == 1010 && res1(0).minPrice == 0.99 && res1(0).count == 2)
     collect(res1(1).status == 'B' && res1(1).sumQuantity == 0 && res1(1).minPrice == 49.95 && res1(1).count == 1)
     collect(res1(2).status == 'S' && res1(2).sumQuantity == 18 && res1(2).minPrice == 5.99 && res1(2).count == 1)
 
-    val res2 = items Where(_.quantity > 0) GroupBy(_.status) Select(g => Rec (
-      "status" -> g._1,
-      "sumQuantity" -> g._2.Sum(_.quantity),
-      "maxQuantity" -> g._2.Max(_.quantity),
-      "avgPrice" -> g._2.Average(_.price),
-      "count" -> g._2.Count
-    ))
+    // val res2 = items Where(_.quantity > 0) GroupBy(_.status) Select(g => Rec (
+    //   "status" -> g._1,
+    //   "sumQuantity" -> g._2.Sum(_.quantity),
+    //   "maxQuantity" -> g._2.Max(_.quantity),
+    //   "avgPrice" -> g._2.Average(_.price),
+    //   "count" -> g._2.Count
+    // ))
+    val res2 = items Where(_.quantity > 0) GroupBy(_.status) Select(g => new {
+      val status = g._1
+      val sumQuantity = g._2.Sum(_.quantity)
+      val maxQuantity = g._2.Max(_.quantity)
+      val avgPrice = g._2.Average(_.price)
+      val count = g._2.Count
+    })
 
     collect(res2.size == 2)
     collect(res2.First.status == 'N' && res2.First.sumQuantity == 1010 && res2.First.maxQuantity == 1000 && approx(res2.First.avgPrice, 1.74) && res2.First.count == 2)
@@ -191,10 +215,14 @@ object QueryableSortRunnerS extends ForgeTestRunnerShallow with TestRec {
 
 object QueryableJoinRunnerS extends ForgeTestRunnerShallow with TestRec {
   def main() = {
-    val res = items.Join(items2)(_.id, _.id)((a,b) => Rec (
-      "id" -> a.id,
-      "quantity" -> b.quantity
-    ))
+    // val res = items.Join(items2)(_.id, _.id)((a,b) => Rec (
+    //   "id" -> a.id,
+    //   "quantity" -> b.quantity
+    // ))
+    val res = items.Join(items2)(_.id, _.id)((a,b) => new {
+      val id = a.id
+      val quantity = b.quantity
+    })
 
     collect(res.size == items.size)
     collect(res(0).id == 0 && res(0).quantity == 10)
