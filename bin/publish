@@ -85,12 +85,12 @@ object ${dslName}Build extends Build {
     libraryDependencies += "org.apache.hadoop" % "hadoop-common" % "2.5.1",
     libraryDependencies += "org.apache.hadoop" % "hadoop-client" % "2.5.1",
     libraryDependencies += "org.apache.hadoop" % "hadoop-hdfs" % "2.5.1",
-    //libraryDependencies += "ch.epfl.lamp" % "scala-records_2.11" % "0.5-SNAPSHOT",
     // used in delitec to access jars
     retrieveManaged := true,
     scalacOptions += "-Yno-generic-signatures",
     scalacOptions += "-Yvirtualize",
-    initialCommands in console += "import ${dslNameLowerCase}.library._; val ${dslName} = new ${dslName}REPL { def main() = {} }; import ${dslName}._"
+    initialCommands in console += "import ${dslNameLowerCase}.library._; val ${dslName} = new ${dslName}REPL { def main() = {} }; import ${dslName}._",
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
   )
 
   val virtBuildSettings = virtBuildSettingsBase ++ Seq(
@@ -106,26 +106,26 @@ ${header}
 
   lazy val LMS_HOME = sys.env.get("LMS_HOME").getOrElse(error("Please set the LMS_HOME environment variable."))
   lazy val DELITE_HOME = sys.env.get("DELITE_HOME").getOrElse(error("Please set the DELITE_HOME environment variable."))
-  //lazy val SCALA_RECORDS_HOME = "../scala-records"
+  lazy val SCALA_RECORDS_HOME = sys.env.get("SCALA_RECORDS_HOME").getOrElse(error("Please set the SCALA_RECORDS_HOME environment variable."))
 
   val scalacp = "/target/scala-${scala_major_vers}/classes/"
   lazy val lms = file(LMS_HOME + scalacp)
   lazy val deliteFramework = file(DELITE_HOME + "/framework" + scalacp)
   lazy val deliteRuntime = file(DELITE_HOME + "/runtime" + scalacp)
   lazy val deliteTest = file(DELITE_HOME + "/framework/delite-test" + scalacp)
-  //lazy val scalaRecords = file(SCALA_RECORDS_HOME + scalacp)
+  lazy val scalaRecords = file(SCALA_RECORDS_HOME + "/core" + scalacp)
 
   val deps = Seq(
     unmanagedClasspath in Compile <+= (baseDirectory) map { bd => Attributed.blank(lms) },
     unmanagedClasspath in Compile <+= (baseDirectory) map { bd => Attributed.blank(deliteFramework) },
     unmanagedClasspath in Compile <+= (baseDirectory) map { bd => Attributed.blank(deliteRuntime) },
     unmanagedClasspath in Compile <+= (baseDirectory) map { bd => Attributed.blank(deliteTest) },
-    //unmanagedClasspath in Compile <+= (baseDirectory) map { bd => Attributed.blank(scalaRecords) },
+    unmanagedClasspath in Compile <+= (baseDirectory) map { bd => Attributed.blank(scalaRecords) },
     unmanagedClasspath in Test <+= (baseDirectory) map { bd => Attributed.blank(lms) },
     unmanagedClasspath in Test <+= (baseDirectory) map { bd => Attributed.blank(deliteFramework) },
     unmanagedClasspath in Test <+= (baseDirectory) map { bd => Attributed.blank(deliteRuntime) },
-    unmanagedClasspath in Test <+= (baseDirectory) map { bd => Attributed.blank(deliteTest) }//,
-    //unmanagedClasspath in Test <+= (baseDirectory) map { bd => Attributed.blank(scalaRecords) }
+    unmanagedClasspath in Test <+= (baseDirectory) map { bd => Attributed.blank(deliteTest) },
+    unmanagedClasspath in Test <+= (baseDirectory) map { bd => Attributed.blank(scalaRecords) }
   )
 
 ${footer}
@@ -140,12 +140,14 @@ ${header}
   val delite_framework = "stanford-ppl" % "framework_${scala_major_vers}" % "0.1-SNAPSHOT"
   val delite_runtime = "stanford-ppl" % "runtime_${scala_major_vers}" % "0.1-SNAPSHOT"
   val delite_tests = "stanford-ppl" % "delite-test_${scala_major_vers}" % "0.1-SNAPSHOT"
+  val scala_records = "ch.epfl.lamp" % "scala-records_2.11" % "0.5-SNAPSHOT"
 
   val deps = Seq(
     libraryDependencies += virtualization_lms_core,
     libraryDependencies += delite_framework,
     libraryDependencies += delite_runtime,
-    libraryDependencies += delite_tests
+    libraryDependencies += delite_tests,
+    libraryDependencies += scalaRecords
   )
 
 ${footer}

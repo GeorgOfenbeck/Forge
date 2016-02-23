@@ -2,13 +2,16 @@ package optiql.shallow.classes
 
 import optiql.shallow._
 import scala.reflect.RefinedManifest
-import Record._
 
 //TODO: this object is basically a misc. grab bag of features, but most of it should be pushed directly into Forge
 object Rewrite {
 
   type Rep[+T] = T
   def unit[T:Manifest](x: T) = x
+
+  trait PimpedRefinedManifest[T] extends RefinedManifest[T] {
+    def create(fields: Seq[(String, Any)]): T
+  }
 
   def groupByHackImpl[K:Manifest,V:Manifest](self: Table[V], keySelector: V => K): Table[Tuple2[K,Table[V]]] = {
     val arr = self.data.take(self.size)
@@ -84,27 +87,26 @@ object Rewrite {
   }).asInstanceOf[T]
 
   def createRecord[T:Manifest](record: ForgeArray[String]): T = {
-    val (elems, isRecord) = manifest[T] match {
-      case rm: RefinedManifest[T] => (rm.fields, true)
-      case m => (List(("",m)), false)
+    val elems = manifest[T] match {
+      case rm: PimpedRefinedManifest[T] => rm.fields
+      case m => throw new RuntimeException(m + " does not have a PimpedRefinedManifest!")
     }
 
     val fields = Range(0,elems.length) map { i =>
       val (field, tp) = elems(i)
       tp.toString match {
-        case s if s.contains("String") => (field, false, (r:T) => record(i))
-        case "Double" => (field, false, (r:T) => record(i).toDouble)
-        case "Float" => (field, false, (r:T) => record(i).toFloat)
-        case "Boolean" => (field, false, (r:T) => record(i) == "true")
-        case "Int" => (field, false, (r:T) => record(i).toInt)
-        case "Long" => (field, false, (r:T) => record(i).toLong)
-        // case "Char" => (field, false, (r:T) => infix_fcharAt(record(i), 0))
-        case d if d.contains("Date") => (field, false, (r:T) => Date(record(i)))
+        case s if s.contains("String") => (field, record(i))
+        case "Double" => (field, record(i).toDouble)
+        case "Float" => (field, record(i).toFloat)
+        case "Boolean" => (field, record(i) == "true")
+        case "Int" => (field, record(i).toInt)
+        case "Long" => (field, record(i).toLong)
+        case "Char" => (field, record(i).charAt(0))
+        case d if d.contains("Date") => (field, Date(record(i)))
         case _ => throw new RuntimeException("Don't know hot to automatically parse type " + tp.toString + ". Try passing in your own parsing function instead.")
       }
     }
     
-    if (isRecord) record_new[T](fields)
-    else fields(0)._3(null.asInstanceOf[T]).asInstanceOf[T]
+    implicitly[Manifest[T]].asInstanceOf[PimpedRefinedManifest[T]].create(fields)
   }
 }

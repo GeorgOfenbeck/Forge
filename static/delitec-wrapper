@@ -21,6 +21,10 @@ def main():
     script_home = delitecommon.script_home
     lib_home = delitecommon.lib_home
     DELITE_HOME = delitecommon.DELITE_HOME
+    SCALA_RECORDS_HOME = os.getenv("SCALA_RECORDS_HOME")
+    if SCALA_RECORDS_HOME is None:
+          exit("error: The SCALA_RECORDS_HOME environment variable must be defined")
+
 
     # DSL cps
     cp = ""
@@ -38,6 +42,8 @@ def main():
     cp = cp + DELITE_HOME + "/framework/target/" + scala_major_id + "/classes" + os.pathsep
     cp = cp + DELITE_HOME + "/framework/delite-test/target/" + scala_major_id + "/classes" + os.pathsep
     cp = cp + DELITE_HOME + "/runtime/target/" + scala_major_id + "/classes" + os.pathsep
+    # scala-records
+    cp = cp + SCALA_RECORDS_HOME + "/core/target/" + scala_major_id + "/classes" + os.pathsep
 
     old_cp = os.getenv("CLASSPATH", "")
     os.putenv("CLASSPATH", old_cp + os.pathsep + cp)
