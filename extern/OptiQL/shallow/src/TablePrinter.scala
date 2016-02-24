@@ -93,7 +93,8 @@ object TablePrinter {
 
   private def getFields(record: Any) = {
     try {
-      record.getClass.getMethod("fieldNames").invoke(record).asInstanceOf[ArrayBuffer[String]].toArray
+      // getDeclaredMethods returns all methods except for the inherited ones
+      record.getClass.getDeclaredMethods.map(x => x.toString).map(s => s.substring(s.lastIndexOf(".")+1, s.lastIndexOf("(")))
     } catch { case e: NoSuchMethodException =>
       val fields = record.getClass.getDeclaredMethods.filter(_.getName.endsWith("_$eq")).map(_.getName.stripSuffix("_$eq"))
       if (fields.length == 0) Array("") else fields
@@ -102,9 +103,9 @@ object TablePrinter {
 
   private def readColumn(record: Any, col: String) = {
     try {
-      record.getClass.getMethod("fields").invoke(record).asInstanceOf[HashMap[String,Any]](col)
-    } catch { case e: NoSuchMethodException => 
       record.getClass.getMethod(col).invoke(record)
+    } catch { case e: NoSuchMethodException => 
+      ""
     }
   }
 

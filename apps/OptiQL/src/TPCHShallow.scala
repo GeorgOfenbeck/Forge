@@ -28,13 +28,13 @@ trait TPCHBaseTraitShallow extends TypesShallow {
   var tpchDataPath: String = _
   val sep = "\\|"
   def loadLineItems() = Table.fromFile[LineItem](tpchDataPath+"/lineitem.tbl", sep)
-  def loadCustomers() = Table.fromFile[Customer](tpchDataPath+"/customer.tbl", sep)
-  def loadNations() = Table.fromFile[Nation](tpchDataPath+"/nation.tbl", sep)
-  def loadOrders() = Table.fromFile[Order](tpchDataPath+"/orders.tbl", sep)
-  def loadParts() = Table.fromFile[Part](tpchDataPath+"/part.tbl", sep)
-  def loadPartSuppliers() = Table.fromFile[PartSupplier](tpchDataPath+"/partsupp.tbl", sep)
-  def loadRegions() = Table.fromFile[Region](tpchDataPath+"/region.tbl", sep)
-  def loadSuppliers() = Table.fromFile[Supplier](tpchDataPath+"/supplier.tbl", sep)
+  // def loadCustomers() = Table.fromFile[Customer](tpchDataPath+"/customer.tbl", sep)
+  // def loadNations() = Table.fromFile[Nation](tpchDataPath+"/nation.tbl", sep)
+  // def loadOrders() = Table.fromFile[Order](tpchDataPath+"/orders.tbl", sep)
+  // def loadParts() = Table.fromFile[Part](tpchDataPath+"/part.tbl", sep)
+  // def loadPartSuppliers() = Table.fromFile[PartSupplier](tpchDataPath+"/partsupp.tbl", sep)
+  // def loadRegions() = Table.fromFile[Region](tpchDataPath+"/region.tbl", sep)
+  // def loadSuppliers() = Table.fromFile[Supplier](tpchDataPath+"/supplier.tbl", sep)
   
   def query(): Unit
   
