@@ -11,8 +11,28 @@ trait ConditionOps {
     val Condition = tpe("Condition")
 
   	data (Condition, "isEmpty" -> MBoolean, "rowIndices" -> MArray(MInt), "colForStartsWith" -> MString, "valueForStartsWith" -> MString, "colForContains" -> MString, "valueForContains" -> MString)
-  	static (Condition) ("apply", Nil, Nil :: Condition) implements allocates (Condition, "unit(true)", ${array_empty[Int](unit(0))}, "unit(\"\")", "unit(\"\")",  "unit(\"\")", "unit(\"\")")
-  	static (Condition) ("apply", Nil, MethodSignature(List(MBoolean, MArray(MInt), MString, MString, MString, MString), Condition)) implements allocates (Condition, ${$0}, ${$1}, ${$2}, ${$3}, ${$4}, ${$5})
+  	static (Condition) ("apply", Nil, Nil :: Condition) implements allocates (Condition, "unit(true)", {
+    s"""array_empty[Int](unit(0))"""
+  }, "unit(\"\")", "unit(\"\")",  "unit(\"\")", "unit(\"\")")
+  	static (Condition) ("apply", Nil, MethodSignature(List(MBoolean, MArray(MInt), MString, MString, MString, MString), Condition)) implements allocates (Condition, {
+  val arg1 = quotedArg(0)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(1)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(2)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(3)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(4)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(5)
+  s"""$arg1"""
+})
 
   	val ConditionOps = withTpe (Condition)
   	ConditionOps {

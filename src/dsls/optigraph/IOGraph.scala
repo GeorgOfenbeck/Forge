@@ -27,242 +27,266 @@ trait IOGraphOps {
 
     val T = tpePar("T")
 
-    direct (IO) ("writeResults", T, (("path",MString),("ids",MArray(MInt)),("data",NodeData(T))) :: MUnit, TNumeric(T), effect = simple) implements single ${
-      writeGraphData($path,ids,data.getRawArray,$data.length)
-    }
+    direct (IO) ("writeResults", T, (("path",MString),("ids",MArray(MInt)),("data",NodeData(T))) :: MUnit, TNumeric(T), effect = simple) implements single {
+        val path = quotedArg("path")
+        val data = quotedArg("data")
+        s"""writeGraphData($path,ids,data.getRawArray,$data.length)"""
+      }
 
     val writeGraphData = compiler (IO) ("writeGraphData", T, (("path",MString),("ids",MArray(MInt)),("data",MArray(T)),("length",MInt)) :: MUnit, TNumeric(T), effect = simple) 
         
-    impl (writeGraphData) (codegen($cala, ${
-      val xfs = new java.io.BufferedWriter(new java.io.FileWriter($path))
-      xfs.write("#node id\\tdata\\n")
-      for (i <- 0 until $length) {
-        xfs.write($ids(i).toString + "\\t")
-        xfs.write($data(i).toString + "\\n")
-      }
-      xfs.close()
-    }))
+    impl (writeGraphData) (codegen($cala, {
+        val path = quotedArg("path")
+        val length = quotedArg("length")
+        val ids = quotedArg("ids")
+        val data = quotedArg("data")
+        s"""val xfs = new java.io.BufferedWriter(new java.io.FileWriter($path))
+xfs.write("#node id\\tdata\\n")
+for (i <- 0 until $length) {
+  xfs.write($ids(i).toString + "\\t")
+  xfs.write($data(i).toString + "\\n")
+}
+xfs.close()"""
+      }))
 
-    impl (writeGraphData) (codegen(cpp, ${
-      std::ofstream xfs($path.c_str());
-      xfs << "#node id \\tdata\\n";
-      for (int64_t i=0; i < $length ; i++) {
-        xfs << $ids->data[i] << "\\t";
-        xfs << $data->data[i] << "\\n";
-      }
-      xfs.close();
-    }))
+    impl (writeGraphData) (codegen(cpp, {
+        val path = quotedArg("path")
+        val length = quotedArg("length")
+        val ids = quotedArg("ids")
+        val data = quotedArg("data")
+        s"""std::ofstream xfs($path.c_str());
+xfs << "#node id \\tdata\\n";
+for (int64_t i=0; i < $length ; i++) {
+  xfs << $ids->data[i] << "\\t";
+  xfs << $data->data[i] << "\\n";
+}
+xfs.close();"""
+      }))
 
-    direct (IO) ("printGraph", Nil, MethodSignature(List(("pathin",MString),("level",MInt),("mod",MDouble),("newMod",MDouble),("numNodes",MInt),("numEdges",MInt),("nodes",MArray(MInt)),("edges",MArray(MInt)),("edgeWeights",MArray(MDouble))),MUnit), effect = simple) implements codegen($cala, ${
-      val pin = $pathin
-      val path = pin + "_" + $level.toString + ".txt"
-      val xfs = new java.io.BufferedWriter(new java.io.FileWriter(path))
-      xfs.write("number of nodes: " + $numNodes + " number of edges: " + $numEdges + "\\n")
-      xfs.write("old mod: " + $mod + " new mod: " + $newMod + "\\n")
+    direct (IO) ("printGraph", Nil, MethodSignature(List(("pathin",MString),("level",MInt),("mod",MDouble),("newMod",MDouble),("numNodes",MInt),("numEdges",MInt),("nodes",MArray(MInt)),("edges",MArray(MInt)),("edgeWeights",MArray(MDouble))),MUnit), effect = simple) implements codegen($cala, {
+        val pathin = quotedArg("pathin")
+        val level = quotedArg("level")
+        val numNodes = quotedArg("numNodes")
+        val numEdges = quotedArg("numEdges")
+        val mod = quotedArg("mod")
+        val newMod = quotedArg("newMod")
+        val nodes = quotedArg("nodes")
+        val edges = quotedArg("edges")
+        val edgeWeights = quotedArg("edgeWeights")
+        s"""val pin = $pathin
+val path = pin + "_" + $level.toString + ".txt"
+val xfs = new java.io.BufferedWriter(new java.io.FileWriter(path))
+xfs.write("number of nodes: " + $numNodes + " number of edges: " + $numEdges + "\\n")
+xfs.write("old mod: " + $mod + " new mod: " + $newMod + "\\n")
 
-      for (i <- 0 until $nodes.length) {
-        val src = i
-        var start = $nodes(i)
-        var end = if(i+1 < $nodes.length) $nodes(i+1) else $edges.length
+for (i <- 0 until $nodes.length) {
+  val src = i
+  var start = $nodes(i)
+  var end = if(i+1 < $nodes.length) $nodes(i+1) else $edges.length
 
-        for(j <- start until end){
-          xfs.write(i.toString + "\\t")
-          xfs.write($edges(j).toString + "\\t")
-          xfs.write($edgeWeights(j).toString + "\\n")
-        }
-      }
-      xfs.close()
-    })
+  for(j <- start until end){
+    xfs.write(i.toString + "\\t")
+    xfs.write($edges(j).toString + "\\t")
+    xfs.write($edgeWeights(j).toString + "\\n")
+  }
+}
+xfs.close()"""
+      })
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 ////////General Loaders
 /////////////////////////////////////////////////////////////////////////////////////////////
-    direct (IO) ("loadUndirectedEdgeList", Nil, MString :: NodeData(Tuple2(MInt,MInt))) implements composite ${
-      val input_edges =
-        ForgeFileReader.readLinesFlattened($0)({line =>
-          val fields = line.fsplit(" ")
-          array_fromfunction(((array_length(fields)-1)*2),{n =>
-            if(n==0) pack(fields(0).toInt,fields(1).toInt)
-            else pack(fields(1).toInt,fields(0).toInt)
-          })
-        })
-       NodeData[Tup2[Int,Int]](input_edges).distinct
-    }
-    direct (IO) ("loadDirectedEdgeList", Nil, MString :: NodeData(Tuple2(MInt,MInt))) implements composite ${
-      val input_edges = ForgeFileReader.readLines($0)({line =>
-          val fields = line.fsplit(" ")
-          pack(fields(0).toInt,fields(1).toInt) 
-      })
-      NodeData[Tup2[Int,Int]](input_edges).distinct
-    }
-    direct (IO) ("createMeshEdgeList", Nil, MInt :: NodeData(Tuple2(MInt,MInt))) implements composite ${
-      val meshSize = $0
-      NodeData(array_fromfunction(meshSize,e => e)).flatMap{ e =>
-        NodeData(array_fromfunction(meshSize,z => z)).map( z => pack(z,e))
-      }.filter(e => e._1 != e._2, e => e).distinct
-    }
+    direct (IO) ("loadUndirectedEdgeList", Nil, MString :: NodeData(Tuple2(MInt,MInt))) implements composite {
+        val arg1 = quotedArg(0)
+        s"""val input_edges =
+  ForgeFileReader.readLinesFlattened($arg1)({line =>
+    val fields = line.fsplit(" ")
+    array_fromfunction(((array_length(fields)-1)*2),{n =>
+if(n==0) pack(fields(0).toInt,fields(1).toInt)
+else pack(fields(1).toInt,fields(0).toInt)
+    })
+  })
+ NodeData[Tup2[Int,Int]](input_edges).distinct"""
+      }
+    direct (IO) ("loadDirectedEdgeList", Nil, MString :: NodeData(Tuple2(MInt,MInt))) implements composite {
+        val arg1 = quotedArg(0)
+        s"""val input_edges = ForgeFileReader.readLines($arg1)({line =>
+    val fields = line.fsplit(" ")
+    pack(fields(0).toInt,fields(1).toInt) 
+})
+NodeData[Tup2[Int,Int]](input_edges).distinct"""
+      }
+    direct (IO) ("createMeshEdgeList", Nil, MInt :: NodeData(Tuple2(MInt,MInt))) implements composite {
+        val arg1 = quotedArg(0)
+        s"""val meshSize = $arg1
+NodeData(array_fromfunction(meshSize,e => e)).flatMap{ e =>
+  NodeData(array_fromfunction(meshSize,z => z)).map( z => pack(z,e))
+}.filter(e => e._1 != e._2, e => e).distinct"""
+      }
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
 ////////Undirected CSR Loader
 /////////////////////////////////////////////////////////////////////////////////////////////
-    direct (IO) ("undirectedGraphFromCSR", Nil, ( (("nodes",MArray(MInt)),("edges",MArray(MInt))) :: UndirectedGraph)) implements composite ${
-      UndirectedGraph(array_length(nodes),array_fromfunction[Int](array_length(edges),e=>e),nodes,edges,array_fromfunction[Double](array_length(edges),e=>1d))    
-    }
-    direct (IO) ("undirectedGraphFromEdgeList", Nil, ("edge_data",NodeData(Tuple2(MInt,MInt))) :: UndirectedGraph) implements composite ${
-      val src_groups = edge_data.groupBy(e => e._1, e => e._2)
-
-      //sort by degree, helps with skew for buckets of nodes
-      val ids1 = NodeData(fhashmap_keys(src_groups))
-      val ids = ids1.sortBy(a => ids1.length - array_buffer_length(fhashmap_get(src_groups,ids1(a)))) //reverse sort by degree
-
-      val numNodes = ids.length
-      val idView = NodeData(array_fromfunction(numNodes,{n => n}))
-      val idHashMap = idView.groupByReduce[Int,Int](n => ids(n), n => n, (a,b) => a)
-      
-      val serial_out = assignUndirectedIndicies(numNodes,edge_data.length,ids,idHashMap,src_groups)
-
-      UndirectedGraph(numNodes,ids.getRawArray,serial_out._1,serial_out._2,array_fromfunction[Double](edge_data.length,e=>1d))    
-    }
-    direct (IO) ("assignUndirectedIndicies", Nil, MethodSignature(List(("numNodes",MInt),("numEdges",MInt),("distinct_ids",NodeData(MInt)),("idHashMap",MHashMap(MInt,MInt)),("src_groups",MHashMap(MInt,MArrayBuffer(MInt)))),Tuple2(MArray(MInt),MArray(MInt)))) implements single ${
-      val src_edge_array = NodeData[Int](numEdges)
-      val src_node_array = NodeData[Int](numNodes)
-      var i = 0
-      var j = 0
-      //I can do -1 here because I am pruning so the last node will never have any neighbors
-      while(i < numNodes){
-        val neighborhood = NodeData(fhashmap_get(src_groups,distinct_ids(i))).map(n =>fhashmap_get(idHashMap,n)).sort
-        var k = 0
-        while(k < neighborhood.length){
-          src_edge_array(j) = neighborhood(k)
-          j += 1
-          k += 1
-        }
-        if(i < numNodes-1){
-          src_node_array(i+1) = neighborhood.length + src_node_array(i)
-        }
-        i += 1
+    direct (IO) ("undirectedGraphFromCSR", Nil, ( (("nodes",MArray(MInt)),("edges",MArray(MInt))) :: UndirectedGraph)) implements composite {
+        s"""UndirectedGraph(array_length(nodes),array_fromfunction[Int](array_length(edges),e=>e),nodes,edges,array_fromfunction[Double](array_length(edges),e=>1d))"""
       }
-      pack(src_node_array.getRawArray,src_edge_array.getRawArray)
-    }
+    direct (IO) ("undirectedGraphFromEdgeList", Nil, ("edge_data",NodeData(Tuple2(MInt,MInt))) :: UndirectedGraph) implements composite {
+        s"""val src_groups = edge_data.groupBy(e => e._1, e => e._2)
+
+
+val ids1 = NodeData(fhashmap_keys(src_groups))
+val ids = ids1.sortBy(a => ids1.length - array_buffer_length(fhashmap_get(src_groups,ids1(a)))) 
+
+val numNodes = ids.length
+val idView = NodeData(array_fromfunction(numNodes,{n => n}))
+val idHashMap = idView.groupByReduce[Int,Int](n => ids(n), n => n, (a,b) => a)
+
+val serial_out = assignUndirectedIndicies(numNodes,edge_data.length,ids,idHashMap,src_groups)
+
+UndirectedGraph(numNodes,ids.getRawArray,serial_out._1,serial_out._2,array_fromfunction[Double](edge_data.length,e=>1d))"""
+      }
+    direct (IO) ("assignUndirectedIndicies", Nil, MethodSignature(List(("numNodes",MInt),("numEdges",MInt),("distinct_ids",NodeData(MInt)),("idHashMap",MHashMap(MInt,MInt)),("src_groups",MHashMap(MInt,MArrayBuffer(MInt)))),Tuple2(MArray(MInt),MArray(MInt)))) implements single {
+        s"""val src_edge_array = NodeData[Int](numEdges)
+val src_node_array = NodeData[Int](numNodes)
+var i = 0
+var j = 0
+
+while(i < numNodes){
+  val neighborhood = NodeData(fhashmap_get(src_groups,distinct_ids(i))).map(n =>fhashmap_get(idHashMap,n)).sort
+  var k = 0
+  while(k < neighborhood.length){
+    src_edge_array(j) = neighborhood(k)
+    j += 1
+    k += 1
+  }
+  if(i < numNodes-1){
+    src_node_array(i+1) = neighborhood.length + src_node_array(i)
+  }
+  i += 1
+}
+pack(src_node_array.getRawArray,src_edge_array.getRawArray)"""
+      }
 /////////////////////////////////////////////////////////////////////////////////////////////
 ////////Directed CSR Loader
 /////////////////////////////////////////////////////////////////////////////////////////////
-    direct (IO) ("directedGraphFromEdgeList", Nil, ("edge_data",NodeData(Tuple2(MInt,MInt))) :: DirectedGraph) implements composite ${
-      val src_groups = edge_data.groupBy(e => e._1, e => e._2)
-      val dst_groups = edge_data.groupBy(e => e._2, e => e._1)
+    direct (IO) ("directedGraphFromEdgeList", Nil, ("edge_data",NodeData(Tuple2(MInt,MInt))) :: DirectedGraph) implements composite {
+        s"""val src_groups = edge_data.groupBy(e => e._1, e => e._2)
+val dst_groups = edge_data.groupBy(e => e._2, e => e._1)
 
-      //go over src_ids and dst_ids map to degree
-      //go over distinct add src_ids and dst_ids degree to hashmap
-      //filter hashmap keys to those greater than sqrroot(n)
-      val src_ids = NodeData(fhashmap_keys(src_groups))
-      val dst_ids = NodeData(fhashmap_keys(dst_groups))
-      val concat = NodeData(array_fromfunction(2,{n=>n})).flatMap[Int](e => if(e==0) src_ids else dst_ids)
-      val distinct_ids = NodeData(fhashmap_keys(concat.groupBy[Int,Int](e => e, e => e)))
 
-      //set up the ID hash map
-      val numNodes = distinct_ids.length
-      val idView = NodeData(array_fromfunction(numNodes,{n => n}))
-      val idHashMap = idView.groupByReduce[Int,Int](n => distinct_ids(n), n => n, (a,b) => a)
 
-      //must filter down the ids we want to flat map to just the distinct src ids we want
-      //gets tricky because order of flatmap must match our internal id order other wise
-      //the edge array gets screwed up
-      val src_ids_ordered = NodeData(array_sort(array_map[Int,Int](src_ids.getRawArray,e => fhashmap_get(idHashMap,e))))
-      val src_edge_array = src_ids_ordered.flatMap{e => NodeData(src_groups(distinct_ids(e))).map(n => fhashmap_get(idHashMap,n))}
 
-      val dst_ids_ordered = NodeData(array_sort(array_map[Int,Int](dst_ids.getRawArray,e => fhashmap_get(idHashMap,e))))
-      val dst_edge_array = dst_ids_ordered.flatMap(e => NodeData(dst_groups(distinct_ids(e))).map{n => fhashmap_get(idHashMap,n)})
+val src_ids = NodeData(fhashmap_keys(src_groups))
+val dst_ids = NodeData(fhashmap_keys(dst_groups))
+val concat = NodeData(array_fromfunction(2,{n=>n})).flatMap[Int](e => if(e==0) src_ids else dst_ids)
+val distinct_ids = NodeData(fhashmap_keys(concat.groupBy[Int,Int](e => e, e => e)))
 
-      val serial_out = assignIndiciesSerialDirected(numNodes,distinct_ids,src_groups,src_ids_ordered,dst_groups,dst_ids_ordered)
-      
-      println("finished file I/O")
-      DirectedGraph(numNodes,distinct_ids.getRawArray,serial_out(0).getRawArray,src_edge_array.getRawArray,serial_out(1).getRawArray,dst_edge_array.getRawArray)
-    }
-    direct (IO) ("assignIndiciesSerialDirected", Nil, MethodSignature(List(("numNodes",MInt),("distinct_ids",NodeData(MInt)),("src_groups",MHashMap(MInt,MArrayBuffer(MInt))),("src_ids_ordered",NodeData(MInt)),("dst_groups",MHashMap(MInt,MArrayBuffer(MInt))),("dst_ids_ordered",NodeData(MInt))), NodeData(NodeData(MInt)) )) implements single ${
-      val src_node_array = NodeData[Int](numNodes)
-      val dst_node_array = NodeData[Int](numNodes)
 
-      var i = 0
-      var src_array_index = 0
-      var dst_array_index = 0
-      while(i < numNodes-1){
-        var degree = 0
-        if(src_ids_ordered(src_array_index)==i){
-          degree += array_buffer_length(fhashmap_get(src_groups,distinct_ids(i)))
-          src_node_array(i+1) = array_buffer_length(fhashmap_get(src_groups,distinct_ids(i))) + src_node_array(i)
-          if((src_array_index+1) < src_ids_ordered.length) src_array_index += 1
-        }
-        else src_node_array(i+1) = src_node_array(i)
-        
-        if(dst_ids_ordered(dst_array_index)==i){
-          degree += array_buffer_length(fhashmap_get(dst_groups,distinct_ids(i)))
-          dst_node_array(i+1) = array_buffer_length(fhashmap_get(dst_groups,distinct_ids(i))) + dst_node_array(i)
-          if((dst_array_index+1) < dst_ids_ordered.length) dst_array_index += 1
-        }
-        else dst_node_array(i+1) = dst_node_array(i)
-        
-        i += 1
+val numNodes = distinct_ids.length
+val idView = NodeData(array_fromfunction(numNodes,{n => n}))
+val idHashMap = idView.groupByReduce[Int,Int](n => distinct_ids(n), n => n, (a,b) => a)
+
+
+
+
+val src_ids_ordered = NodeData(array_sort(array_map[Int,Int](src_ids.getRawArray,e => fhashmap_get(idHashMap,e))))
+val src_edge_array = src_ids_ordered.flatMap{e => NodeData(src_groups(distinct_ids(e))).map(n => fhashmap_get(idHashMap,n))}
+
+val dst_ids_ordered = NodeData(array_sort(array_map[Int,Int](dst_ids.getRawArray,e => fhashmap_get(idHashMap,e))))
+val dst_edge_array = dst_ids_ordered.flatMap(e => NodeData(dst_groups(distinct_ids(e))).map{n => fhashmap_get(idHashMap,n)})
+
+val serial_out = assignIndiciesSerialDirected(numNodes,distinct_ids,src_groups,src_ids_ordered,dst_groups,dst_ids_ordered)
+
+println("finished file I/O")
+DirectedGraph(numNodes,distinct_ids.getRawArray,serial_out(0).getRawArray,src_edge_array.getRawArray,serial_out(1).getRawArray,dst_edge_array.getRawArray)"""
       }
+    direct (IO) ("assignIndiciesSerialDirected", Nil, MethodSignature(List(("numNodes",MInt),("distinct_ids",NodeData(MInt)),("src_groups",MHashMap(MInt,MArrayBuffer(MInt))),("src_ids_ordered",NodeData(MInt)),("dst_groups",MHashMap(MInt,MArrayBuffer(MInt))),("dst_ids_ordered",NodeData(MInt))), NodeData(NodeData(MInt)) )) implements single {
+        s"""val src_node_array = NodeData[Int](numNodes)
+val dst_node_array = NodeData[Int](numNodes)
 
-      val result = NodeData[NodeData[Int]](2)
-      result(0) = src_node_array
-      result(1) = dst_node_array
-      NodeData(result.getRawArray)
+var i = 0
+var src_array_index = 0
+var dst_array_index = 0
+while(i < numNodes-1){
+  var degree = 0
+  if(src_ids_ordered(src_array_index)==i){
+    degree += array_buffer_length(fhashmap_get(src_groups,distinct_ids(i)))
+    src_node_array(i+1) = array_buffer_length(fhashmap_get(src_groups,distinct_ids(i))) + src_node_array(i)
+    if((src_array_index+1) < src_ids_ordered.length) src_array_index += 1
+  }
+  else src_node_array(i+1) = src_node_array(i)
+  
+  if(dst_ids_ordered(dst_array_index)==i){
+    degree += array_buffer_length(fhashmap_get(dst_groups,distinct_ids(i)))
+    dst_node_array(i+1) = array_buffer_length(fhashmap_get(dst_groups,distinct_ids(i))) + dst_node_array(i)
+    if((dst_array_index+1) < dst_ids_ordered.length) dst_array_index += 1
+  }
+  else dst_node_array(i+1) = dst_node_array(i)
+  
+  i += 1
+}
 
-      result
-    }
+val result = NodeData[NodeData[Int]](2)
+result(0) = src_node_array
+result(1) = dst_node_array
+NodeData(result.getRawArray)
+
+result"""
+      }
     /////////////////////////////////////////////////////////////////////////////////////////////
 ////////Undirected Adjacency Loader
 /////////////////////////////////////////////////////////////////////////////////////////////
-    direct (IO) ("loadUndirectedAdjList", Nil, MString :: NodeData(NodeData(MInt))) implements composite ${
-      val input = NodeData(ForgeFileReader.readLines($0)({line =>
-          val fields = line.fsplit("\t")
-          NodeData[Int](array_map[String,Int](fields,e => e.toInt))
-      }))
-      input
-    }
-
-    direct (IO) ("createICBUndirectedGraphFromAdjList", Nil, (NodeData(NodeData(MInt))) :: UndirectedGraph) implements composite ${
-      val input = $0
-      val numNodes = input.length
-      val idView = NodeData(array_fromfunction(numNodes,{n => n}))
-      var numEdges = 0l
-
-      val csr = input.sortBy({ a => 
-        numNodes - input(a).length
-      })
-
-      val distinct_ids = csr.map[Int]{nd => nd(0)}
-      val idHashMap = idView.groupByReduce[Int,Int](n => distinct_ids(n), n => n, (a,b) => a)
-
-      val csrNeighbors = csr.map[NodeData[Int]]{ nd =>
-        NodeData.fromFunction(nd.length-1,a => a+1).map(a => fhashmap_get(idHashMap,nd(a))).sort
+    direct (IO) ("loadUndirectedAdjList", Nil, MString :: NodeData(NodeData(MInt))) implements composite {
+        val arg1 = quotedArg(0)
+        s"""val input = NodeData(ForgeFileReader.readLines($arg1)({line =>
+    val fields = line.fsplit("\t")
+    NodeData[Int](array_map[String,Int](fields,e => e.toInt))
+}))
+input"""
       }
 
-      val serial_out = assignADJUndirectedIndicies(numNodes,numEdges.toInt,distinct_ids,idHashMap,csrNeighbors)
-      UndirectedGraph(numNodes,distinct_ids.getRawArray,serial_out._1,serial_out._2,array_fromfunction[Double](numEdges.toInt,e=>1d))    
-    }
-    direct (IO) ("assignADJUndirectedIndicies", Nil, MethodSignature(List(("numNodes",MInt),("numEdges",MInt),("distinct_ids",NodeData(MInt)),("idHashMap",MHashMap(MInt,MInt)),("src_groups",NodeData(NodeData(MInt)))),Tuple2(MArray(MInt),MArray(MInt)))) implements single ${
-      val src_edge_array = NodeData[Int](numEdges)
-      val src_node_array = NodeData[Int](numNodes)
-      var i = 0
-      var j = 0
-      //I can do -1 here because I am pruning so the last node will never have any neighbors
-      while(i < numNodes){
-        val neighborhood = src_groups(i)
-        var k = 0
-        while(k < neighborhood.length){
-          src_edge_array(j) = neighborhood(k)
-          j += 1
-          k += 1
-        }
-        if(i < numNodes-1){
-          src_node_array(i+1) = neighborhood.length + src_node_array(i)
-        }
-        i += 1
+    direct (IO) ("createICBUndirectedGraphFromAdjList", Nil, (NodeData(NodeData(MInt))) :: UndirectedGraph) implements composite {
+        val arg1 = quotedArg(0)
+        s"""val input = $arg1
+val numNodes = input.length
+val idView = NodeData(array_fromfunction(numNodes,{n => n}))
+var numEdges = 0l
+
+val csr = input.sortBy({ a => 
+  numNodes - input(a).length
+})
+
+val distinct_ids = csr.map[Int]{nd => nd(0)}
+val idHashMap = idView.groupByReduce[Int,Int](n => distinct_ids(n), n => n, (a,b) => a)
+
+val csrNeighbors = csr.map[NodeData[Int]]{ nd =>
+  NodeData.fromFunction(nd.length-1,a => a+1).map(a => fhashmap_get(idHashMap,nd(a))).sort
+}
+
+val serial_out = assignADJUndirectedIndicies(numNodes,numEdges.toInt,distinct_ids,idHashMap,csrNeighbors)
+UndirectedGraph(numNodes,distinct_ids.getRawArray,serial_out._1,serial_out._2,array_fromfunction[Double](numEdges.toInt,e=>1d))"""
       }
-      pack(src_node_array.getRawArray,src_edge_array.getRawArray)
-    }
+    direct (IO) ("assignADJUndirectedIndicies", Nil, MethodSignature(List(("numNodes",MInt),("numEdges",MInt),("distinct_ids",NodeData(MInt)),("idHashMap",MHashMap(MInt,MInt)),("src_groups",NodeData(NodeData(MInt)))),Tuple2(MArray(MInt),MArray(MInt)))) implements single {
+        s"""val src_edge_array = NodeData[Int](numEdges)
+val src_node_array = NodeData[Int](numNodes)
+var i = 0
+var j = 0
+
+while(i < numNodes){
+  val neighborhood = src_groups(i)
+  var k = 0
+  while(k < neighborhood.length){
+    src_edge_array(j) = neighborhood(k)
+    j += 1
+    k += 1
+  }
+  if(i < numNodes-1){
+    src_node_array(i+1) = neighborhood.length + src_node_array(i)
+  }
+  i += 1
+}
+pack(src_node_array.getRawArray,src_edge_array.getRawArray)"""
+      }
 /////////////////////////////////////////////////////////////////////////////////////////////    
   }
 }

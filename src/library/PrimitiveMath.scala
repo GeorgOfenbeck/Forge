@@ -135,10 +135,18 @@ trait PrimitiveMathGen {
       val name = ("BinOp"+canonicalName(lhs)+canonicalName(rhs))
       val thisBinOp = tpeClassInst(name, Nil, BinOp(makeRawTpe(lhs),makeRawTpe(rhs),makeRawTpe(ret)))
       val (leftArg, rightArg) = (formatArg("lhs", lhs, ret), formatArg("rhs", rhs, ret))
-      infix (thisBinOp) ("plus", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements composite ${ forge_\${ret.name.toLowerCase}_plus(\$leftArg, \$rightArg) }
-      infix (thisBinOp) ("minus", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements composite ${ forge_\${ret.name.toLowerCase}_minus(\$leftArg, \$rightArg) }
-      infix (thisBinOp) ("times", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements composite ${ forge_\${ret.name.toLowerCase}_times(\$leftArg, \$rightArg) }
-      infix (thisBinOp) ("divide", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements composite ${ forge_\${ret.name.toLowerCase}_divide(\$leftArg, \$rightArg) }
+      infix (thisBinOp) ("plus", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements composite {
+        s"""forge_${ret.name.toLowerCase}_plus($leftArg, $rightArg)"""
+      }
+      infix (thisBinOp) ("minus", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements composite {
+        s"""forge_${ret.name.toLowerCase}_minus($leftArg, $rightArg)"""
+      }
+      infix (thisBinOp) ("times", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements composite {
+        s"""forge_${ret.name.toLowerCase}_times($leftArg, $rightArg)"""
+      }
+      infix (thisBinOp) ("divide", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements composite {
+      s"""forge_${ret.name.toLowerCase}_divide($leftArg, $rightArg)"""
+    }
     }
   }
 
@@ -156,10 +164,18 @@ trait PrimitiveMathGen {
       if (!(lhs.stage == now && rhs.stage == now)) {
         val ret = returnValue(lhs,rhs)
         val (leftArg, rightArg) = (formatArg("lhs", lhs, ret), formatArg("rhs", rhs, ret))
-        infix (Prim) ("+", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements redirect ${ forge_\${ret.name.toLowerCase}_plus(\$leftArg, \$rightArg) }
-        infix (Prim) ("-", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements redirect ${ forge_\${ret.name.toLowerCase}_minus(\$leftArg, \$rightArg) }
-        infix (Prim) ("*", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements redirect ${ forge_\${ret.name.toLowerCase}_times(\$leftArg, \$rightArg) }
-        infix (Prim) ("/", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements redirect ${ forge_\${ret.name.toLowerCase}_divide(\$leftArg, \$rightArg) }
+        infix (Prim) ("+", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements redirect {
+          s"""forge_${ret.name.toLowerCase}_plus($leftArg, $rightArg)"""
+        }
+        infix (Prim) ("-", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements redirect {
+          s"""forge_${ret.name.toLowerCase}_minus($leftArg, $rightArg)"""
+        }
+        infix (Prim) ("*", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements redirect {
+          s"""forge_${ret.name.toLowerCase}_times($leftArg, $rightArg)"""
+        }
+        infix (Prim) ("/", Nil, ((("lhs",lhs),("rhs",rhs)) :: ret)) implements redirect {
+        s"""forge_${ret.name.toLowerCase}_divide($leftArg, $rightArg)"""
+      }
       }
     }
   }

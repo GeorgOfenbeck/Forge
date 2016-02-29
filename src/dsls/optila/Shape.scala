@@ -54,47 +54,70 @@ trait ShapeOps {
     data(UTri, ("N", MInt), ("_includeDiagonal", MBoolean))
 
     // create a new upper triangular shape for an N x N square matrix
-    direct (UTri) ("utriangle", Nil, MethodSignature(List(("N", MInt), ("includeDiagonal", MBoolean, "unit(true)")), UTri)) implements allocates(UTri, ${$0}, ${$1})
+    direct (UTri) ("utriangle", Nil, MethodSignature(List(("N", MInt), ("includeDiagonal", MBoolean, "unit(true)")), UTri)) implements allocates(UTri, {
+  val arg1 = quotedArg(0)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(1)
+  s"""$arg1"""
+})
 
-    compiler (UTri) ("tri_size", Nil, ("n", MInt) :: MInt) implements composite ${ n*(n+1)/2 } // arithmetic sequence sum
+    compiler (UTri) ("tri_size", Nil, ("n", MInt) :: MInt) implements composite {
+  s"""n*(n+1)/2"""
+} // arithmetic sequence sum
 
     val UTriOps = withTpe(UTri)
     UTriOps {
       infix ("N") (Nil :: MInt) implements getter(0, "N")
       infix ("includeDiagonal") (Nil :: MBoolean) implements getter(0, "_includeDiagonal")      
 
-      infix ("size") (Nil :: MInt) implements composite ${
-        val total = tri_size($self.N)
-        if ($self.includeDiagonal) total else total - 1        
-      }
-
-      infix ("contains") ((("i",MInt), ("j",MInt)) :: MBoolean) implements composite ${ 
-        if ($self.includeDiagonal) {
-          i < $self.N && i <= j
+      infix ("size") (Nil :: MInt) implements composite {
+          val self = quotedArg("self")
+          s"""val total = tri_size($self.N)
+if ($self.includeDiagonal) total else total - 1"""
         }
-        else {
-          i < $self.N && i < j
-        } 
-      }
+
+      infix ("contains") ((("i",MInt), ("j",MInt)) :: MBoolean) implements composite {
+          val self = quotedArg("self")
+          s"""if ($self.includeDiagonal) {
+  i < $self.N && i <= j
+}
+else {
+  i < $self.N && i < j
+}"""
+        }
 
       // http://stackoverflow.com/a/244550  
       // O(1), but with non-trivial overhead. We should compare against the explicitly stored version.
-      infix ("apply") (("n", MInt) :: Tup2(MInt, MInt)) implements composite ${        
-        val m = if ($self.includeDiagonal) $self.N else $self.N-1
-        val off = if ($self.includeDiagonal) 0 else 1
-        val t = tri_size(m)-1-n
-        val k = floor((sqrt(8*t+1)-1)/2)
-        val row = m-1-k
-        pack((row, (n+tri_size(row))%m+off))
-      }      
+      infix ("apply") (("n", MInt) :: Tup2(MInt, MInt)) implements composite {
+          val self = quotedArg("self")
+          s"""val m = if ($self.includeDiagonal) $self.N else $self.N-1
+val off = if ($self.includeDiagonal) 0 else 1
+val t = tri_size(m)-1-n
+val k = floor((sqrt(8*t+1)-1)/2)
+val row = m-1-k
+pack((row, (n+tri_size(row))%m+off))"""
+        }      
     }
 
     // add to Shape class
     val S = tpePar("S")
     val Shape = lookupGrp("Shape").asInstanceOf[Rep[DSLTypeClass]]    
     val UTriShape = tpeClassInst("ShapeUTri", Nil, Shape(UTri))
-    infix (UTriShape) ("contains", Nil, (UTri, MInt, MInt) :: MBoolean) implements composite ${ $0.contains($1,$2) }
-    infix (UTriShape) ("apply", Nil, (UTri, MInt) :: Tup2(MInt,MInt)) implements composite ${ $0.apply($1) }
-    infix (UTriShape) ("size", Nil, UTri :: Tup2(MInt,MInt)) implements composite ${ $0.size }    
+    infix (UTriShape) ("contains", Nil, (UTri, MInt, MInt) :: MBoolean) implements composite {
+      val arg1 = quotedArg(0)
+      val arg2 = quotedArg(1)
+      val arg3 = quotedArg(2)
+      s"""$arg1.contains($arg2,$arg3)"""
+    }
+    infix (UTriShape) ("apply", Nil, (UTri, MInt) :: Tup2(MInt,MInt)) implements composite {
+      val arg1 = quotedArg(0)
+      val arg2 = quotedArg(1)
+      s"""$arg1.apply($arg2)"""
+    }
+    infix (UTriShape) ("size", Nil, UTri :: Tup2(MInt,MInt)) implements composite {
+    val arg1 = quotedArg(0)
+    s"""$arg1.size"""
+  }    
   }
 }

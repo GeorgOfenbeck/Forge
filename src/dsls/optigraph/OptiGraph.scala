@@ -34,9 +34,22 @@ trait OptiGraphDSL extends ForgeApplication
     val T = tpePar("T")
     val R = tpePar("R")
     val GArray = grp("GArrays")
-    direct (GArray) ("garray_fromfunction", T, (MInt, MInt ==> T) :: MArray(T)) implements composite ${ array_fromfunction($0, $1) }
-    direct (GArray) ("garray_reduce", T, (MArray(T), (T,T) ==> T, T) :: T) implements composite ${ array_reduce($0, $1, $2) }    
-    infix (GArray) ("map", (T,R), (MArray(T), T ==> R) :: MArray(R)) implements composite ${ array_map($0, $1) }
+    direct (GArray) ("garray_fromfunction", T, (MInt, MInt ==> T) :: MArray(T)) implements composite {
+      val arg1 = quotedArg(0)
+      val arg2 = quotedArg(1)
+      s"""array_fromfunction($arg1, $arg2)"""
+    }
+    direct (GArray) ("garray_reduce", T, (MArray(T), (T,T) ==> T, T) :: T) implements composite {
+      val arg1 = quotedArg(0)
+      val arg2 = quotedArg(1)
+      val arg3 = quotedArg(2)
+      s"""array_reduce($arg1, $arg2, $arg3)"""
+    }    
+    infix (GArray) ("map", (T,R), (MArray(T), T ==> R) :: MArray(R)) implements composite {
+  val arg1 = quotedArg(0)
+  val arg2 = quotedArg(1)
+  s"""array_map($arg1, $arg2)"""
+}
 
     /**
      * The main portion of our DSL

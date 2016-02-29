@@ -32,29 +32,37 @@ trait BufferableOps {
     val DenseMatrix = lookupTpe("DenseMatrix")
 
     val DenseVectorBufferable = tpeClassInst("BufferableDenseVector", T, Bufferable(DenseVector(T)))
-    infix (DenseVectorBufferable) ("mutable", T, DenseVector(T) :: DenseVector(T), effect = mutable) implements composite ${ DenseVector[T]($0.length, $0.isRow) }
-    infix (DenseVectorBufferable) ("write", T, (DenseVector(T),DenseVector(T)) :: MUnit, effect = write(1)) implements composite ${
-      $0.indices foreach { i => $1(i) = $0(i) }
+    infix (DenseVectorBufferable) ("mutable", T, DenseVector(T) :: DenseVector(T), effect = mutable) implements composite {
+      val arg1 = quotedArg(0)
+      s"""DenseVector[T]($arg1.length, $arg1.isRow)"""
     }
-    infix (DenseVectorBufferable) ("size", T, DenseVector(T) :: MInt) implements composite ${ $0.length }
+    infix (DenseVectorBufferable) ("write", T, (DenseVector(T),DenseVector(T)) :: MUnit, effect = write(1)) implements composite {
+        val arg1 = quotedArg(0)
+        val arg2 = quotedArg(1)
+        s"""$arg1.indices foreach { i => $arg2(i) = $arg1(i) }"""
+      }
+    infix (DenseVectorBufferable) ("size", T, DenseVector(T) :: MInt) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1.length"""
+}
 
     val DenseMatrixBufferable = tpeClassInst("BufferableDenseMatrix", T, Bufferable(DenseMatrix(T)))
-    infix (DenseMatrixBufferable) ("mutable", T, DenseMatrix(T) :: DenseMatrix(T), effect = mutable) implements composite ${ DenseMatrix[T]($0.numRows, $0.numCols) }
-    infix (DenseMatrixBufferable) ("write", T, (DenseMatrix(T),DenseMatrix(T)) :: MUnit, effect = write(1)) implements composite ${
-      // can fuse with flat matrix loops
-      (unit(0)::$0.size) foreach { i =>
-        // need to access the matrix array directly at index i (instead of using normal accessor which computes an offset)
-        densematrix_raw_update($1,i,densematrix_raw_apply($0,i))
-      }
-
-      // can fuse with nested matrix loops
-      // $0.rowIndices foreach { i =>
-      //   $0.colIndices foreach { j =>
-      //     $1(i,j) = $0(i,j)
-      //   }
-      // }
+    infix (DenseMatrixBufferable) ("mutable", T, DenseMatrix(T) :: DenseMatrix(T), effect = mutable) implements composite {
+      val arg1 = quotedArg(0)
+      s"""DenseMatrix[T]($arg1.numRows, $arg1.numCols)"""
     }
-    infix (DenseMatrixBufferable) ("size", T, DenseMatrix(T) :: MInt) implements composite ${ $0.size }
+    infix (DenseMatrixBufferable) ("write", T, (DenseMatrix(T),DenseMatrix(T)) :: MUnit, effect = write(1)) implements composite {
+        val arg1 = quotedArg(0)
+        val arg2 = quotedArg(1)
+        s"""(unit(0)::$arg1.size) foreach { i =>
+  
+  densematrix_raw_update($arg2,i,densematrix_raw_apply($arg1,i))
+}"""
+      }
+    infix (DenseMatrixBufferable) ("size", T, DenseMatrix(T) :: MInt) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1.size"""
+}
 
     // tuples of bufferables
     for (arity <- 2 until maxTuples) {
@@ -63,14 +71,20 @@ trait BufferableOps {
       val TupBuf = tpeClassInst("BufferableTup"+arity, pars, Bufferable(Tup))
 
       val makeTupBufStr = "pack" + (1 to arity).map(i => "t._"+i+".mutable").mkString("((",",","))")
-      infix (TupBuf) ("mutable", pars, ("t",Tup) :: Tup, effect = mutable) implements composite ${ \$makeTupBufStr }
+      infix (TupBuf) ("mutable", pars, ("t",Tup) :: Tup, effect = mutable) implements composite {
+  s"""$makeTupBufStr"""
+}
 
       val writeTupBufStr = (1 to arity).map(i => "t1._"+i+".write(t2._"+i+")").mkString("\n")
-      infix (TupBuf) ("write", pars, (("t1",Tup),("t2",Tup)) :: MUnit, effect = write(1)) implements composite ${ \$writeTupBufStr }
+      infix (TupBuf) ("write", pars, (("t1",Tup),("t2",Tup)) :: MUnit, effect = write(1)) implements composite {
+  s"""$writeTupBufStr"""
+}
 
       // val sizeTupBufStr = (1 to arity).map(i => "t._"+i+".size").mkString("+") // scalac typer crash
       val sizeTupBufStr = (1 to arity).map(i => "bufferable_size(t._"+i+")").mkString("+")
-      infix (TupBuf) ("size", pars, ("t",Tup) :: MInt) implements composite ${ \$sizeTupBufStr }
+      infix (TupBuf) ("size", pars, ("t",Tup) :: MInt) implements composite {
+      s"""$sizeTupBufStr"""
+    }
     }
 
   }

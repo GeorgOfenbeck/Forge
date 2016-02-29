@@ -27,22 +27,40 @@ trait StringableOps {
 
     // primitive implementations
     val DoubleStringable = tpeClassInst("StringableDouble", Nil, Stringable(MDouble))
-    infix (DoubleStringable) ("makeStr", Nil, MDouble :: MString) implements composite ${ optila_fmt_str($0) }
+    infix (DoubleStringable) ("makeStr", Nil, MDouble :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""optila_fmt_str($arg1)"""
+}
 
     val FloatStringable = tpeClassInst("StringableFloat", Nil, Stringable(MFloat))
-    infix (FloatStringable) ("makeStr", Nil, MFloat :: MString) implements composite ${ optila_fmt_str($0) }
+    infix (FloatStringable) ("makeStr", Nil, MFloat :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""optila_fmt_str($arg1)"""
+}
 
     val IntStringable = tpeClassInst("StringableInt", Nil, Stringable(MInt))
-    infix (IntStringable) ("makeStr", Nil, MInt :: MString) implements composite ${ optila_fmt_str($0) }
+    infix (IntStringable) ("makeStr", Nil, MInt :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""optila_fmt_str($arg1)"""
+}
 
     val LongStringable = tpeClassInst("StringableLong", Nil, Stringable(MLong))
-    infix (LongStringable) ("makeStr", Nil, MLong :: MString) implements composite ${ optila_fmt_str($0) }
+    infix (LongStringable) ("makeStr", Nil, MLong :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""optila_fmt_str($arg1)"""
+}
 
     val BoolStringable = tpeClassInst("StringableBool", Nil, Stringable(MBoolean))
-    infix (BoolStringable) ("makeStr", Nil, MBoolean :: MString) implements composite ${ optila_fmt_str($0) }
+    infix (BoolStringable) ("makeStr", Nil, MBoolean :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""optila_fmt_str($arg1)"""
+}
 
     val StrStringable = tpeClassInst("StringableStr", Nil, Stringable(MString))
-    infix (StrStringable) ("makeStr", Nil, MString :: MString) implements composite ${ $0 }
+    infix (StrStringable) ("makeStr", Nil, MString :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1"""
+}
 
     // OptiLA types
     val DenseVector = lookupTpe("DenseVector")
@@ -55,28 +73,52 @@ trait StringableOps {
     val SparseMatrixBuildable = lookupTpe("SparseMatrixBuildable")
 
     val DenseVectorStringable = tpeClassInst("StringableDenseVector", T withBound TStringable, Stringable(DenseVector(T)))
-    infix (DenseVectorStringable) ("makeStr", Nil, DenseVector(T) :: MString) implements composite ${ $0.makeString }
+    infix (DenseVectorStringable) ("makeStr", Nil, DenseVector(T) :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1.makeString"""
+}
 
     val DenseVectorViewStringable = tpeClassInst("StringableDenseVectorView", T withBound TStringable, Stringable(DenseVectorView(T)))
-    infix (DenseVectorViewStringable) ("makeStr", Nil, DenseVectorView(T) :: MString) implements composite ${ $0.makeString }
+    infix (DenseVectorViewStringable) ("makeStr", Nil, DenseVectorView(T) :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1.makeString"""
+}
 
     val IndexVectorStringable = tpeClassInst("StringableIndexVector", Nil, Stringable(IndexVector))
-    infix (IndexVectorStringable) ("makeStr", Nil, IndexVector :: MString) implements composite ${ $0.makeString }
+    infix (IndexVectorStringable) ("makeStr", Nil, IndexVector :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1.makeString"""
+}
 
     val DenseMatrixStringable = tpeClassInst("StringableDenseMatrix", T withBound TStringable, Stringable(DenseMatrix(T)))
-    infix (DenseMatrixStringable) ("makeStr", Nil, DenseMatrix(T) :: MString) implements composite ${ $0.makeString }
+    infix (DenseMatrixStringable) ("makeStr", Nil, DenseMatrix(T) :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1.makeString"""
+}
 
     val DenseMatrixViewStringable = tpeClassInst("StringableDenseMatrixView", T withBound TStringable, Stringable(DenseMatrixView(T)))
-    infix (DenseMatrixViewStringable) ("makeStr", Nil, DenseMatrixView(T) :: MString) implements composite ${ $0.makeString }
+    infix (DenseMatrixViewStringable) ("makeStr", Nil, DenseMatrixView(T) :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1.makeString"""
+}
 
     val SparseVectorStringable = tpeClassInst("StringableSparseVector", T withBound TStringable, Stringable(SparseVector(T)))
-    infix (SparseVectorStringable) ("makeStr", Nil, SparseVector(T) :: MString) implements composite ${ $0.makeString }
+    infix (SparseVectorStringable) ("makeStr", Nil, SparseVector(T) :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1.makeString"""
+}
 
     val SparseMatrixBuildableStringable = tpeClassInst("StringableSparseMatrixBuildable", T withBound TStringable, Stringable(SparseMatrixBuildable(T)))
-    infix (SparseMatrixBuildableStringable) ("makeStr", Nil, SparseMatrixBuildable(T) :: MString) implements composite ${ $0.makeString }
+    infix (SparseMatrixBuildableStringable) ("makeStr", Nil, SparseMatrixBuildable(T) :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1.makeString"""
+}
 
     val SparseMatrixStringable = tpeClassInst("StringableSparseMatrix", T withBound TStringable, Stringable(SparseMatrix(T)))
-    infix (SparseMatrixStringable) ("makeStr", Nil, SparseMatrix(T) :: MString) implements composite ${ $0.makeString }
+    infix (SparseMatrixStringable) ("makeStr", Nil, SparseMatrix(T) :: MString) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1.makeString"""
+}
 
 
     // tuples of stringables
@@ -86,7 +128,9 @@ trait StringableOps {
       val TupStringable = tpeClassInst("StringableTup"+arity, pars, Stringable(Tup))
 
       val makeTupStr = "\"(\"+" + (1 to arity).map(i => "t._"+i+".makeStr").mkString("+\",\"+") + "+\")\""
-      infix (TupStringable) ("makeStr", pars, ("t",Tup) :: MString) implements composite ${ \$makeTupStr }
+      infix (TupStringable) ("makeStr", pars, ("t",Tup) :: MString) implements composite {
+      s"""$makeTupStr"""
+    }
     }
   }
 }

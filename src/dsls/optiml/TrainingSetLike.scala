@@ -45,43 +45,87 @@ trait TrainingSetLikeOps {
     infix (TrainingSetLike) ("timesScalar", (D,L,TS), (TS(D,L), MInt, D) :: DenseVector(D), TArith(D))
 
     val DenseTrainingSetTrainingSetLike = tpeClassInst("TrainingSetLikeDenseTrainingSet", (D, L), TTrainingSetLike(D,L,DenseTrainingSet(D,L)))
-    infix (DenseTrainingSetTrainingSetLike) ("labels", (D,L), DenseTrainingSet(D,L) :: DenseVector(L)) implements composite ${ $0.labels }
-    infix (DenseTrainingSetTrainingSetLike) ("numSamples", (D,L), DenseTrainingSet(D,L) :: MInt) implements composite ${ $0.numSamples }
-    infix (DenseTrainingSetTrainingSetLike) ("numFeatures", (D,L), DenseTrainingSet(D,L) :: MInt) implements composite ${ $0.numFeatures }
-    infix (DenseTrainingSetTrainingSetLike) ("getRows", (D,L), (DenseTrainingSet(D,L), IndexVector) :: DenseTrainingSet(D,L)) implements composite ${
-      DenseTrainingSet($0.data.apply($1), $0.labels.apply($1))
+    infix (DenseTrainingSetTrainingSetLike) ("labels", (D,L), DenseTrainingSet(D,L) :: DenseVector(L)) implements composite {
+      val arg1 = quotedArg(0)
+      s"""$arg1.labels"""
     }
-    infix (DenseTrainingSetTrainingSetLike) ("getCols", (D,L), (DenseTrainingSet(D,L), IndexVector) :: DenseTrainingSet(D,L)) implements composite ${
-      DenseTrainingSet($0.data.getCols($1), $0.labels)
+    infix (DenseTrainingSetTrainingSetLike) ("numSamples", (D,L), DenseTrainingSet(D,L) :: MInt) implements composite {
+      val arg1 = quotedArg(0)
+      s"""$arg1.numSamples"""
     }
-    infix (DenseTrainingSetTrainingSetLike) ("dot", (D,L), (DenseTrainingSet(D,L), MInt, DenseVector(D)) :: D, TArith(D)) implements composite ${
-      $0($1) *:* $2
+    infix (DenseTrainingSetTrainingSetLike) ("numFeatures", (D,L), DenseTrainingSet(D,L) :: MInt) implements composite {
+      val arg1 = quotedArg(0)
+      s"""$arg1.numFeatures"""
     }
-    infix (DenseTrainingSetTrainingSetLike) ("times", (D,L), (DenseTrainingSet(D,L), MInt, DenseVector(D)) :: DenseVector(D), TArith(D)) implements composite ${
-      $0($1) * $2
-    }
-    infix (DenseTrainingSetTrainingSetLike) ("timesScalar", (D,L), (DenseTrainingSet(D,L), MInt, D) :: DenseVector(D), TArith(D)) implements composite ${
-      $0($1) * $2
-    }
+    infix (DenseTrainingSetTrainingSetLike) ("getRows", (D,L), (DenseTrainingSet(D,L), IndexVector) :: DenseTrainingSet(D,L)) implements composite {
+        val arg1 = quotedArg(0)
+        val arg2 = quotedArg(1)
+        s"""DenseTrainingSet($arg1.data.apply($arg2), $arg1.labels.apply($arg2))"""
+      }
+    infix (DenseTrainingSetTrainingSetLike) ("getCols", (D,L), (DenseTrainingSet(D,L), IndexVector) :: DenseTrainingSet(D,L)) implements composite {
+        val arg1 = quotedArg(0)
+        val arg2 = quotedArg(1)
+        s"""DenseTrainingSet($arg1.data.getCols($arg2), $arg1.labels)"""
+      }
+    infix (DenseTrainingSetTrainingSetLike) ("dot", (D,L), (DenseTrainingSet(D,L), MInt, DenseVector(D)) :: D, TArith(D)) implements composite {
+        val arg1 = quotedArg(0)
+        val arg2 = quotedArg(1)
+        val arg3 = quotedArg(2)
+        s"""$arg1($arg2) *:* $arg3"""
+      }
+    infix (DenseTrainingSetTrainingSetLike) ("times", (D,L), (DenseTrainingSet(D,L), MInt, DenseVector(D)) :: DenseVector(D), TArith(D)) implements composite {
+        val arg1 = quotedArg(0)
+        val arg2 = quotedArg(1)
+        val arg3 = quotedArg(2)
+        s"""$arg1($arg2) * $arg3"""
+      }
+    infix (DenseTrainingSetTrainingSetLike) ("timesScalar", (D,L), (DenseTrainingSet(D,L), MInt, D) :: DenseVector(D), TArith(D)) implements composite {
+        val arg1 = quotedArg(0)
+        val arg2 = quotedArg(1)
+        val arg3 = quotedArg(2)
+        s"""$arg1($arg2) * $arg3"""
+      }
 
     val SparseTrainingSetTrainingSetLike = tpeClassInst("TrainingSetLikeSparseTrainingSet", (D, L), TTrainingSetLike(D,L,SparseTrainingSet(D,L)))
-    infix (SparseTrainingSetTrainingSetLike) ("labels", (D,L), SparseTrainingSet(D,L) :: DenseVector(L)) implements composite ${ $0.labels }
-    infix (SparseTrainingSetTrainingSetLike) ("numSamples", (D,L), SparseTrainingSet(D,L) :: MInt) implements composite ${ $0.numSamples }
-    infix (SparseTrainingSetTrainingSetLike) ("numFeatures", (D,L), SparseTrainingSet(D,L) :: MInt) implements composite ${ $0.numFeatures }
-    infix (SparseTrainingSetTrainingSetLike) ("getRows", (D,L), (SparseTrainingSet(D,L), IndexVector) :: SparseTrainingSet(D,L)) implements composite ${
-      SparseTrainingSet($0.data.apply($1), $0.labels.apply($1))
+    infix (SparseTrainingSetTrainingSetLike) ("labels", (D,L), SparseTrainingSet(D,L) :: DenseVector(L)) implements composite {
+      val arg1 = quotedArg(0)
+      s"""$arg1.labels"""
     }
-    infix (SparseTrainingSetTrainingSetLike) ("getCols", (D,L), (SparseTrainingSet(D,L), IndexVector) :: SparseTrainingSet(D,L)) implements composite ${
-      SparseTrainingSet($0.data.getCols($1), $0.labels)
+    infix (SparseTrainingSetTrainingSetLike) ("numSamples", (D,L), SparseTrainingSet(D,L) :: MInt) implements composite {
+      val arg1 = quotedArg(0)
+      s"""$arg1.numSamples"""
     }
-    infix (SparseTrainingSetTrainingSetLike) ("dot", (D,L), (SparseTrainingSet(D,L), MInt, DenseVector(D)) :: D, TArith(D)) implements composite ${
-      $0($1) *:* $2
+    infix (SparseTrainingSetTrainingSetLike) ("numFeatures", (D,L), SparseTrainingSet(D,L) :: MInt) implements composite {
+      val arg1 = quotedArg(0)
+      s"""$arg1.numFeatures"""
     }
-    infix (SparseTrainingSetTrainingSetLike) ("times", (D,L), (SparseTrainingSet(D,L), MInt, DenseVector(D)) :: DenseVector(D), TArith(D)) implements composite ${
-      ($0($1)*$2).toDense
-    }
-    infix (SparseTrainingSetTrainingSetLike) ("timesScalar", (D,L), (SparseTrainingSet(D,L), MInt, D) :: DenseVector(D), TArith(D)) implements composite ${
-      ($0($1)*$2).toDense
-    }
+    infix (SparseTrainingSetTrainingSetLike) ("getRows", (D,L), (SparseTrainingSet(D,L), IndexVector) :: SparseTrainingSet(D,L)) implements composite {
+        val arg1 = quotedArg(0)
+        val arg2 = quotedArg(1)
+        s"""SparseTrainingSet($arg1.data.apply($arg2), $arg1.labels.apply($arg2))"""
+      }
+    infix (SparseTrainingSetTrainingSetLike) ("getCols", (D,L), (SparseTrainingSet(D,L), IndexVector) :: SparseTrainingSet(D,L)) implements composite {
+        val arg1 = quotedArg(0)
+        val arg2 = quotedArg(1)
+        s"""SparseTrainingSet($arg1.data.getCols($arg2), $arg1.labels)"""
+      }
+    infix (SparseTrainingSetTrainingSetLike) ("dot", (D,L), (SparseTrainingSet(D,L), MInt, DenseVector(D)) :: D, TArith(D)) implements composite {
+        val arg1 = quotedArg(0)
+        val arg2 = quotedArg(1)
+        val arg3 = quotedArg(2)
+        s"""$arg1($arg2) *:* $arg3"""
+      }
+    infix (SparseTrainingSetTrainingSetLike) ("times", (D,L), (SparseTrainingSet(D,L), MInt, DenseVector(D)) :: DenseVector(D), TArith(D)) implements composite {
+        val arg1 = quotedArg(0)
+        val arg2 = quotedArg(1)
+        val arg3 = quotedArg(2)
+        s"""($arg1($arg2)*$arg3).toDense"""
+      }
+    infix (SparseTrainingSetTrainingSetLike) ("timesScalar", (D,L), (SparseTrainingSet(D,L), MInt, D) :: DenseVector(D), TArith(D)) implements composite {
+        val arg1 = quotedArg(0)
+        val arg2 = quotedArg(1)
+        val arg3 = quotedArg(2)
+        s"""($arg1($arg2)*$arg3).toDense"""
+      }
   }
 }

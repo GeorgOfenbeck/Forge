@@ -45,28 +45,62 @@ trait FactorGraphOps {
       ("edgeIsPositiveF2V", DenseVector(MBoolean)),
       ("nonEvidenceVariables", DenseVector(MInt))
     ), FactorGraph)) implements
-      allocates(FactorGraph, ${$0}, ${$1}, ${$2}, ${$3}, ${$4}, ${$5}, ${$6}, ${$7}, ${$8}, ${$9})
+      allocates(FactorGraph, {
+  val arg1 = quotedArg(0)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(1)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(2)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(3)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(4)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(5)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(6)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(7)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(8)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(9)
+  s"""$arg1"""
+})
 
     val FactorGraphOps = withTpe(FactorGraph)
     FactorGraphOps {
       infix ("v2f") (Nil :: CSRGraph) implements getter(0, "_v2f")
       infix ("f2v") (Nil :: CSRGraph) implements getter(0, "_f2v")
 
-      infix ("numVariables") (Nil :: MInt) implements composite ${
-        ($self).v2f.numNodes
-      }
+      infix ("numVariables") (Nil :: MInt) implements composite {
+          val self = quotedArg("self")
+          s"""($self).v2f.numNodes"""
+        }
 
-      infix ("numFactors") (Nil :: MInt) implements composite ${
-        ($self).f2v.numNodes
-      }
+      infix ("numFactors") (Nil :: MInt) implements composite {
+          val self = quotedArg("self")
+          s"""($self).f2v.numNodes"""
+        }
 
-      infix ("numEdges") (Nil :: MInt) implements composite ${
-        ($self).v2f.numEdges
-      }
+      infix ("numEdges") (Nil :: MInt) implements composite {
+          val self = quotedArg("self")
+          s"""($self).v2f.numEdges"""
+        }
 
-      infix ("numWeights") (Nil :: MInt) implements composite ${
-        ($self).weightValue.length
-      }
+      infix ("numWeights") (Nil :: MInt) implements composite {
+          val self = quotedArg("self")
+          s"""($self).weightValue.length"""
+        }
 
       infix ("weightValue") (Nil :: DenseVector(MDouble)) implements getter(0, "_weightValue")
 
@@ -84,65 +118,69 @@ trait FactorGraphOps {
 
       infix ("nonEvidenceVariables") (Nil :: DenseVector(MInt)) implements getter(0, "_nonEvidenceVariables")
 
-      infix ("mutable") (Nil :: FactorGraph) implements composite ${
-        FactorGraph(
-          $self.v2f,
-          $self.f2v,
-          $self.weightValue.mutable(),
-          $self.weightIsFixed,
-          $self.variableValue.mutable(),
-          $self.variableIsEvidence,
-          $self.factorWeightIdx,
-          $self.factorFunction,
-          $self.edgeIsPositiveF2V,
-          $self.nonEvidenceVariables
-        )
-      }
+      infix ("mutable") (Nil :: FactorGraph) implements composite {
+          val self = quotedArg("self")
+          s"""FactorGraph(
+  $self.v2f,
+  $self.f2v,
+  $self.weightValue.mutable(),
+  $self.weightIsFixed,
+  $self.variableValue.mutable(),
+  $self.variableIsEvidence,
+  $self.factorWeightIdx,
+  $self.factorFunction,
+  $self.edgeIsPositiveF2V,
+  $self.nonEvidenceVariables
+)"""
+        }
 
-      infix ("mutableWeights") (Nil :: FactorGraph) implements composite ${
-        FactorGraph(
-          $self.v2f,
-          $self.f2v,
-          $self.weightValue.mutable(),
-          $self.weightIsFixed,
-          $self.variableValue,
-          $self.variableIsEvidence,
-          $self.factorWeightIdx,
-          $self.factorFunction,
-          $self.edgeIsPositiveF2V,
-          $self.nonEvidenceVariables
-        )
-      }
+      infix ("mutableWeights") (Nil :: FactorGraph) implements composite {
+          val self = quotedArg("self")
+          s"""FactorGraph(
+  $self.v2f,
+  $self.f2v,
+  $self.weightValue.mutable(),
+  $self.weightIsFixed,
+  $self.variableValue,
+  $self.variableIsEvidence,
+  $self.factorWeightIdx,
+  $self.factorFunction,
+  $self.edgeIsPositiveF2V,
+  $self.nonEvidenceVariables
+)"""
+        }
 
-      infix ("mutableVariables") (Nil :: FactorGraph) implements composite ${
-        FactorGraph(
-          $self.v2f,
-          $self.f2v,
-          $self.weightValue,
-          $self.weightIsFixed,
-          $self.variableValue.mutable(),
-          $self.variableIsEvidence,
-          $self.factorWeightIdx,
-          $self.factorFunction,
-          $self.edgeIsPositiveF2V,
-          $self.nonEvidenceVariables
-        )
-      }
+      infix ("mutableVariables") (Nil :: FactorGraph) implements composite {
+          val self = quotedArg("self")
+          s"""FactorGraph(
+  $self.v2f,
+  $self.f2v,
+  $self.weightValue,
+  $self.weightIsFixed,
+  $self.variableValue.mutable(),
+  $self.variableIsEvidence,
+  $self.factorWeightIdx,
+  $self.factorFunction,
+  $self.edgeIsPositiveF2V,
+  $self.nonEvidenceVariables
+)"""
+        }
 
-      infix ("deepcopy") (Nil :: FactorGraph) implements composite ${
-        FactorGraph(
-          $self.v2f.deepcopy,
-          $self.f2v.deepcopy,
-          $self.weightValue.Clone,
-          $self.weightIsFixed.Clone,
-          $self.variableValue.Clone,
-          $self.variableIsEvidence.Clone,
-          $self.factorWeightIdx.Clone,
-          $self.factorFunction.Clone,
-          $self.edgeIsPositiveF2V.Clone,
-          $self.nonEvidenceVariables.Clone
-        )
-      }
+      infix ("deepcopy") (Nil :: FactorGraph) implements composite {
+          val self = quotedArg("self")
+          s"""FactorGraph(
+  $self.v2f.deepcopy,
+  $self.f2v.deepcopy,
+  $self.weightValue.Clone,
+  $self.weightIsFixed.Clone,
+  $self.variableValue.Clone,
+  $self.variableIsEvidence.Clone,
+  $self.factorWeightIdx.Clone,
+  $self.factorFunction.Clone,
+  $self.edgeIsPositiveF2V.Clone,
+  $self.nonEvidenceVariables.Clone
+)"""
+        }
     }
   }
 
@@ -159,7 +197,16 @@ trait FactorGraphOps {
     )
 
     static (DDFGFWeight) ("apply", Nil, (MInt, MBoolean, MDouble) :: DDFGFWeight) implements
-      allocates(DDFGFWeight, ${$0}, ${$1}, ${$2})
+      allocates(DDFGFWeight, {
+  val arg1 = quotedArg(0)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(1)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(2)
+  s"""$arg1"""
+})
 
     val DDFGFWeightOps = withTpe(DDFGFWeight)
     DDFGFWeightOps {
@@ -179,7 +226,25 @@ trait FactorGraphOps {
     )
 
     static (DDFGFVariable) ("apply", Nil, MethodSignature(List(MInt, MBoolean, MDouble, MInt, MInt, MInt), DDFGFVariable)) implements
-      allocates(DDFGFVariable, ${$0}, ${$1}, ${$2}, ${$3}, ${$4}, ${$5})
+      allocates(DDFGFVariable, {
+  val arg1 = quotedArg(0)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(1)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(2)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(3)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(4)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(5)
+  s"""$arg1"""
+})
 
     val DDFDFVariableOps = withTpe(DDFGFVariable)
     DDFDFVariableOps {
@@ -200,7 +265,19 @@ trait FactorGraphOps {
     )
 
     static (DDFGFFactor) ("apply", Nil, (MInt, MInt, MInt, MInt) :: DDFGFFactor) implements
-      allocates(DDFGFFactor, ${$0}, ${$1}, ${$2}, ${$3})
+      allocates(DDFGFFactor, {
+  val arg1 = quotedArg(0)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(1)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(2)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(3)
+  s"""$arg1"""
+})
 
     val DDFGFFactorOps = withTpe(DDFGFFactor)
     DDFGFFactorOps {
@@ -220,7 +297,22 @@ trait FactorGraphOps {
     )
 
     static (DDFGFEdge) ("apply", Nil, (MInt, MInt, MInt, MBoolean, MInt) :: DDFGFEdge) implements
-      allocates(DDFGFEdge, ${$0}, ${$1}, ${$2}, ${$3}, ${$4})
+      allocates(DDFGFEdge, {
+  val arg1 = quotedArg(0)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(1)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(2)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(3)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(4)
+  s"""$arg1"""
+})
 
     val DDFGFEdgeOps = withTpe(DDFGFEdge)
     DDFGFEdgeOps {
@@ -243,81 +335,86 @@ trait FactorGraphOps {
 
     val IO = grp("IO")
 
-    compiler (IO) ("ddfg_read_weights", Nil, ("path", MString) :: DenseVector(DDFGFWeight)) implements single ${
-      val dis = datainputstream_new($path)
-      val out = DenseVector[DDFGFWeight](0, true)
-      while (dis.available() > 0) {
-        val weightId = dis.readLong().toInt
-        val isFixed = dis.readBoolean()
-        val initialValue = dis.readDouble()   
+    compiler (IO) ("ddfg_read_weights", Nil, ("path", MString) :: DenseVector(DDFGFWeight)) implements single {
+        val path = quotedArg("path")
+        s"""val dis = datainputstream_new($path)
+val out = DenseVector[DDFGFWeight](0, true)
+while (dis.available() > 0) {
+  val weightId = dis.readLong().toInt
+  val isFixed = dis.readBoolean()
+  val initialValue = dis.readDouble()   
 
-        out <<= DDFGFWeight(weightId, isFixed, initialValue)
+  out <<= DDFGFWeight(weightId, isFixed, initialValue)
+}
+dis.fclose()
+out.unsafeImmutable"""
       }
-      dis.fclose()
-      out.unsafeImmutable
-    }
 
-    compiler (IO) ("ddfg_read_variables", Nil, ("path",MString) :: DenseVector(DDFGFVariable)) implements single ${
-      val dis = datainputstream_new($path)
-      val out = DenseVector[DDFGFVariable](0, true)
-      while (dis.available() > 0) {
-        val variableId = dis.readLong().toInt
-        val isEvidence = dis.readBoolean()
-        val initialValue = dis.readDouble()
-        val dataType = dis.readShort().toInt
-        val edgeCount = dis.readLong().toInt
-        val cardinality = dis.readLong().toInt
-        
-        out <<= DDFGFVariable(variableId, isEvidence, initialValue, dataType, edgeCount, cardinality)
+    compiler (IO) ("ddfg_read_variables", Nil, ("path",MString) :: DenseVector(DDFGFVariable)) implements single {
+        val path = quotedArg("path")
+        s"""val dis = datainputstream_new($path)
+val out = DenseVector[DDFGFVariable](0, true)
+while (dis.available() > 0) {
+  val variableId = dis.readLong().toInt
+  val isEvidence = dis.readBoolean()
+  val initialValue = dis.readDouble()
+  val dataType = dis.readShort().toInt
+  val edgeCount = dis.readLong().toInt
+  val cardinality = dis.readLong().toInt
+  
+  out <<= DDFGFVariable(variableId, isEvidence, initialValue, dataType, edgeCount, cardinality)
+}
+dis.fclose()
+out.unsafeImmutable"""
       }
-      dis.fclose()
-      out.unsafeImmutable
-    }
 
-    compiler (IO) ("ddfg_read_edges", Nil, ("path",MString) :: DenseVector(DDFGFEdge)) implements single ${
-      val dis = datainputstream_new($path)
-      val out = DenseVector[DDFGFEdge](0, true)
-      while (dis.available() > 0) {
-        val variableId = dis.readLong().toInt
-        val factorId = dis.readLong().toInt
-        val position = dis.readLong().toInt
-        val isPositive = dis.readBoolean()
-        val equalPredicate = dis.readLong().toInt
-        
-        out <<= DDFGFEdge(variableId, factorId, position, isPositive, equalPredicate)
+    compiler (IO) ("ddfg_read_edges", Nil, ("path",MString) :: DenseVector(DDFGFEdge)) implements single {
+        val path = quotedArg("path")
+        s"""val dis = datainputstream_new($path)
+val out = DenseVector[DDFGFEdge](0, true)
+while (dis.available() > 0) {
+  val variableId = dis.readLong().toInt
+  val factorId = dis.readLong().toInt
+  val position = dis.readLong().toInt
+  val isPositive = dis.readBoolean()
+  val equalPredicate = dis.readLong().toInt
+  
+  out <<= DDFGFEdge(variableId, factorId, position, isPositive, equalPredicate)
+}
+dis.fclose()
+out.unsafeImmutable"""
       }
-      dis.fclose()
-      out.unsafeImmutable
-    }
 
-    compiler (IO) ("ddfg_read_factors", Nil, ("path",MString) :: DenseVector(DDFGFFactor)) implements single ${
-      val dis = datainputstream_new($path)
-      val out = DenseVector[DDFGFFactor](0, true)
-      while (dis.available() > 0) {
-        val factorId = dis.readLong().toInt
-        val weightId = dis.readLong().toInt
-        val factorFunction = dis.readShort().toInt
-        val edgeCount = dis.readLong().toInt
+    compiler (IO) ("ddfg_read_factors", Nil, ("path",MString) :: DenseVector(DDFGFFactor)) implements single {
+        val path = quotedArg("path")
+        s"""val dis = datainputstream_new($path)
+val out = DenseVector[DDFGFFactor](0, true)
+while (dis.available() > 0) {
+  val factorId = dis.readLong().toInt
+  val weightId = dis.readLong().toInt
+  val factorFunction = dis.readShort().toInt
+  val edgeCount = dis.readLong().toInt
 
-        out <<= DDFGFFactor(factorId, weightId, factorFunction, edgeCount)
+  out <<= DDFGFFactor(factorId, weightId, factorFunction, edgeCount)
+}
+dis.fclose()
+out.unsafeImmutable"""
       }
-      dis.fclose()
-      out.unsafeImmutable
-    }
 
     /* temporary cumulative sum */
-    compiler (IO) ("ddfg_util_cumsum", Nil, DenseVector(MInt) :: DenseVector(MInt)) implements composite ${
-      val rv = ((0::($0.length + unit(1))) map { i => unit(0) }).mutable
-      rv(0) = unit(0)
+    compiler (IO) ("ddfg_util_cumsum", Nil, DenseVector(MInt) :: DenseVector(MInt)) implements composite {
+        val arg1 = quotedArg(0)
+        s"""val rv = ((0::($arg1.length + unit(1))) map { i => unit(0) }).mutable
+rv(0) = unit(0)
 
-      var idx = unit(0)
-      while(idx < $0.length) {
-        rv(idx + unit(1)) = rv(idx) + $0(idx)
-        idx += unit(1)
+var idx = unit(0)
+while(idx < $arg1.length) {
+  rv(idx + unit(1)) = rv(idx) + $arg1(idx)
+  idx += unit(1)
+}
+
+rv.unsafeImmutable"""
       }
-
-      rv.unsafeImmutable
-    }
 
     // ("v2f", CSRGraph), 
     // ("f2v", CSRGraph), 
@@ -330,86 +427,90 @@ trait FactorGraphOps {
     // ("edgeIsPositiveF2V", DenseVector(MBoolean)),
     // ("nonEvidenceVariables", DenseVector(MInt))
 
-    direct (IO) ("readFactorGraph", Nil, MethodSignature(List(("factorsPath", MString), ("variablesPath", MString), ("weightsPath", MString), ("edgesPath", MString)), FactorGraph)) implements composite ${
-      val factorsRaw = ddfg_read_factors($factorsPath)
-      val variablesRaw = ddfg_read_variables($variablesPath)
-      val weightsRaw = ddfg_read_weights($weightsPath)
-      val edgesRaw = ddfg_read_edges($edgesPath)
+    direct (IO) ("readFactorGraph", Nil, MethodSignature(List(("factorsPath", MString), ("variablesPath", MString), ("weightsPath", MString), ("edgesPath", MString)), FactorGraph)) implements composite {
+        val factorsPath = quotedArg("factorsPath")
+        val variablesPath = quotedArg("variablesPath")
+        val weightsPath = quotedArg("weightsPath")
+        val edgesPath = quotedArg("edgesPath")
+        s"""val factorsRaw = ddfg_read_factors($factorsPath)
+val variablesRaw = ddfg_read_variables($variablesPath)
+val weightsRaw = ddfg_read_weights($weightsPath)
+val edgesRaw = ddfg_read_edges($edgesPath)
 
-      val v2fEdgeCounts = (variablesRaw map (v => unit(0))).mutable
-      var ecidx = unit(0)
-      while (ecidx < edgesRaw.length) {
-        val e = edgesRaw(ecidx)
-        v2fEdgeCounts(e.variableId) = v2fEdgeCounts(e.variableId) + unit(1)
-        ecidx += unit(1)
+val v2fEdgeCounts = (variablesRaw map (v => unit(0))).mutable
+var ecidx = unit(0)
+while (ecidx < edgesRaw.length) {
+  val e = edgesRaw(ecidx)
+  v2fEdgeCounts(e.variableId) = v2fEdgeCounts(e.variableId) + unit(1)
+  ecidx += unit(1)
+}
+
+val f2vEdgeCounts = factorsRaw map (f => f.edgeCount)
+
+val v2fnodes = ddfg_util_cumsum(v2fEdgeCounts)
+val f2vnodes = ddfg_util_cumsum(f2vEdgeCounts)
+
+val v2fEdgeIdx = (variablesRaw map (v => unit(0))).mutable
+
+val v2fedges = DenseVector[Int](edgesRaw.length, unit(true))
+val f2vedges = DenseVector[Int](edgesRaw.length, unit(true))
+val weightValue = DenseVector[Double](weightsRaw.length, unit(true))
+val weightIsFixed = DenseVector[Boolean](weightsRaw.length, unit(true))
+val variableValue = DenseVector[Boolean](variablesRaw.length, unit(true))
+val variableIsEvidence = DenseVector[Boolean](variablesRaw.length, unit(true))
+val factorWeightIdx = DenseVector[Int](factorsRaw.length, unit(true))
+val factorFunction = DenseVector[Int](factorsRaw.length, unit(true))
+val edgeIsPositiveF2V = DenseVector[Boolean](edgesRaw.length, unit(true))
+
+val nonEvidenceVariables = variablesRaw.filter(v => !v.isEvidence).map(v => v.variableId).sort()
+
+var widx = unit(0)
+while (widx < weightsRaw.length) {
+  val w = weightsRaw(widx)
+  weightValue(w.weightId) = w.initialValue
+  weightIsFixed(w.weightId) = w.isFixed
+  widx += unit(1)
+}
+
+var vidx = unit(0)
+while (vidx < variablesRaw.length) {
+  val v = variablesRaw(vidx)
+  variableValue(v.variableId) = (v.initialValue >= unit(0.5)) 
+  variableIsEvidence(v.variableId) = v.isEvidence
+  vidx += unit(1)
+}
+
+var fidx = unit(0)
+while (fidx < factorsRaw.length) {
+  val f = factorsRaw(fidx)
+  factorWeightIdx(f.factorId) = f.weightId
+  factorFunction(f.factorId) = f.factorFunction
+  fidx += unit(1)
+}
+
+var eidx = unit(0)
+while (eidx < edgesRaw.length) {
+  val e = edgesRaw(eidx)
+  f2vedges(f2vnodes(e.factorId) + e.position) = e.variableId
+  v2fedges(v2fnodes(e.variableId) + v2fEdgeIdx(e.variableId)) = e.factorId
+  v2fEdgeIdx(e.variableId) = v2fEdgeIdx(e.variableId) + unit(1)
+  edgeIsPositiveF2V(f2vnodes(e.factorId) + e.position) = e.isPositive
+  eidx += unit(1)
+}
+
+FactorGraph(
+  CSRGraph(v2fnodes.unsafeImmutable, v2fedges.unsafeImmutable),
+  CSRGraph(f2vnodes.unsafeImmutable, f2vedges.unsafeImmutable),
+  weightValue.unsafeImmutable,
+  weightIsFixed.unsafeImmutable,
+  variableValue.unsafeImmutable,
+  variableIsEvidence.unsafeImmutable,
+  factorWeightIdx.unsafeImmutable,
+  factorFunction.unsafeImmutable,
+  edgeIsPositiveF2V.unsafeImmutable,
+  nonEvidenceVariables
+)"""
       }
-
-      val f2vEdgeCounts = factorsRaw map (f => f.edgeCount)
-
-      val v2fnodes = ddfg_util_cumsum(v2fEdgeCounts)
-      val f2vnodes = ddfg_util_cumsum(f2vEdgeCounts)
-
-      val v2fEdgeIdx = (variablesRaw map (v => unit(0))).mutable
-
-      val v2fedges = DenseVector[Int](edgesRaw.length, unit(true))
-      val f2vedges = DenseVector[Int](edgesRaw.length, unit(true))
-      val weightValue = DenseVector[Double](weightsRaw.length, unit(true))
-      val weightIsFixed = DenseVector[Boolean](weightsRaw.length, unit(true))
-      val variableValue = DenseVector[Boolean](variablesRaw.length, unit(true))
-      val variableIsEvidence = DenseVector[Boolean](variablesRaw.length, unit(true))
-      val factorWeightIdx = DenseVector[Int](factorsRaw.length, unit(true))
-      val factorFunction = DenseVector[Int](factorsRaw.length, unit(true))
-      val edgeIsPositiveF2V = DenseVector[Boolean](edgesRaw.length, unit(true))
-
-      val nonEvidenceVariables = variablesRaw.filter(v => !v.isEvidence).map(v => v.variableId).sort()
-
-      var widx = unit(0)
-      while (widx < weightsRaw.length) {
-        val w = weightsRaw(widx)
-        weightValue(w.weightId) = w.initialValue
-        weightIsFixed(w.weightId) = w.isFixed
-        widx += unit(1)
-      }
-
-      var vidx = unit(0)
-      while (vidx < variablesRaw.length) {
-        val v = variablesRaw(vidx)
-        variableValue(v.variableId) = (v.initialValue >= unit(0.5)) 
-        variableIsEvidence(v.variableId) = v.isEvidence
-        vidx += unit(1)
-      }
-
-      var fidx = unit(0)
-      while (fidx < factorsRaw.length) {
-        val f = factorsRaw(fidx)
-        factorWeightIdx(f.factorId) = f.weightId
-        factorFunction(f.factorId) = f.factorFunction
-        fidx += unit(1)
-      }
-
-      var eidx = unit(0)
-      while (eidx < edgesRaw.length) {
-        val e = edgesRaw(eidx)
-        f2vedges(f2vnodes(e.factorId) + e.position) = e.variableId
-        v2fedges(v2fnodes(e.variableId) + v2fEdgeIdx(e.variableId)) = e.factorId
-        v2fEdgeIdx(e.variableId) = v2fEdgeIdx(e.variableId) + unit(1)
-        edgeIsPositiveF2V(f2vnodes(e.factorId) + e.position) = e.isPositive
-        eidx += unit(1)
-      }
-
-      FactorGraph(
-        CSRGraph(v2fnodes.unsafeImmutable, v2fedges.unsafeImmutable),
-        CSRGraph(f2vnodes.unsafeImmutable, f2vedges.unsafeImmutable),
-        weightValue.unsafeImmutable,
-        weightIsFixed.unsafeImmutable,
-        variableValue.unsafeImmutable,
-        variableIsEvidence.unsafeImmutable,
-        factorWeightIdx.unsafeImmutable,
-        factorFunction.unsafeImmutable,
-        edgeIsPositiveF2V.unsafeImmutable,
-        nonEvidenceVariables
-      )
-    }
   }
 
   def importFactorGraphReplicateHackOps() {
@@ -421,18 +522,24 @@ trait FactorGraphOps {
 
     data(Replicated, ("_copies", MArray(T)))
 
-    static (Replicated) ("apply", T, MArray(T) :: Replicated(T)) implements allocates(Replicated, ${$0})
+    static (Replicated) ("apply", T, MArray(T) :: Replicated(T)) implements allocates(Replicated, {
+  val arg1 = quotedArg(0)
+  s"""$arg1"""
+})
 
-    fimplicit (Replicated) ("readLocal", T, (("r", Replicated(T)) :: T)) implements redirect ${ r.local }
+    fimplicit (Replicated) ("readLocal", T, (("r", Replicated(T)) :: T)) implements redirect {
+  s"""r.local"""
+}
 
     val ReplicatedOps = withTpe(Replicated)
     ReplicatedOps {
       compiler ("get_copies") (Nil :: MArray(T)) implements getter(0, "_copies")
 
-      infix ("local") (Nil :: T) implements composite ${
-        val socketId = getSocket
-        array_apply(get_copies($self), socketId)
-      }
+      infix ("local") (Nil :: T) implements composite {
+          val self = quotedArg("self")
+          s"""val socketId = getSocket
+array_apply(get_copies($self), socketId)"""
+        }
     }
 
     val getSocket = direct (Control) ("getSocket", Nil, Nil :: MInt)
@@ -443,10 +550,11 @@ trait FactorGraphOps {
     getNumSockets implements codegen($cala, { "1" })
     getNumSockets implements codegen(cpp, { "resourceInfo->numSockets" })
 
-    direct (Control) ("replicate", Nil, FactorGraph :: Replicated(FactorGraph)) implements composite ${
-      val numSockets = getNumSockets
-      Replicated(array_fromfunction(numSockets, isocket => $0.deepcopy))
-    }
+    direct (Control) ("replicate", Nil, FactorGraph :: Replicated(FactorGraph)) implements composite {
+        val arg1 = quotedArg(0)
+        s"""val numSockets = getNumSockets
+Replicated(array_fromfunction(numSockets, isocket => $arg1.deepcopy))"""
+      }
   }
 }
 

@@ -35,71 +35,88 @@ trait GraphOps{
     GraphCommonOps{
       infix ("numNodes")(Nil :: MInt) implements getter(0,"_numNodes")
 
-      infix ("nodes")(Nil :: NodeIdView) implements composite ${NodeIdView($self.numNodes)}
+      infix ("nodes")(Nil :: NodeIdView) implements composite {
+  val self = quotedArg("self")
+  s"""NodeIdView($self.numNodes)"""
+}
 
       //given an ID return a node
-      infix("getNodeFromID")(MInt :: Node) implements composite ${
-        val result = NodeIdView($self.numNodes).mapreduce[Int]( i => i, (a,b) => a+b, i => $self.getExternalID(Node(i))==$1)
-        if(result >= $self.numNodes() || result < 0) fatal("ERROR. ID: " + $1 + " does not exist in this UndirectedGraph!")
-        Node(result)
-      }
-      infix ("foreachNode") ((Node ==> MUnit) :: MUnit, effect = simple) implements composite ${
-        NodeData(array_fromfunction($self.numNodes,{n => n})).foreach{ i =>
-          $1(Node(i))
+      infix("getNodeFromID")(MInt :: Node) implements composite {
+          val self = quotedArg("self")
+          val arg1 = quotedArg(1)
+          s"""val result = NodeIdView($self.numNodes).mapreduce[Int]( i => i, (a,b) => a+b, i => $self.getExternalID(Node(i))==$arg1)
+if(result >= $self.numNodes() || result < 0) fatal("ERROR. ID: " + $arg1 + " does not exist in this UndirectedGraph!")
+Node(result)"""
         }
-      }
-      infix("mapNodes")( (Node==>R) :: NodeData(R), addTpePars=R) implements composite ${
-        NodeData[R](array_fromfunction($self.numNodes,{n => $1(Node(n))}))
-      }
+      infix ("foreachNode") ((Node ==> MUnit) :: MUnit, effect = simple) implements composite {
+          val self = quotedArg("self")
+          val arg1 = quotedArg(1)
+          s"""NodeData(array_fromfunction($self.numNodes,{n => n})).foreach{ i =>
+  $arg1(Node(i))
+}"""
+        }
+      infix("mapNodes")( (Node==>R) :: NodeData(R), addTpePars=R) implements composite {
+          val self = quotedArg("self")
+          val arg1 = quotedArg(1)
+          s"""NodeData[R](array_fromfunction($self.numNodes,{n => $arg1(Node(n))}))"""
+        }
 
       infix ("getExternalIDs") (Nil :: MArray(MInt)) implements getter(0, "_externalIDs")
-      infix ("getExternalID") (Node :: MInt) implements single ${array_apply($self.getExternalIDs,$1.id)}
-      //perform BF traversal
-      infix ("inBFOrder") ( CurriedMethodSignature(List(Node,((Node,NodeData(R),NodeData(MInt)) ==> R),((Node,NodeData(R),NodeData(R),NodeData(MInt)) ==> R)),NodeData(R)), TFractional(R), addTpePars=R, effect=simple) implements composite ${
-        val levelArray = NodeData[Int]($self.numNodes)
-        val bitMap = AtomicIntArray($self.numNodes)
-        val nodes = NodeIdView($self.numNodes) 
-        val forwardComp = NodeData[R]($self.numNodes)
-        val reverseComp = NodeData[R]($self.numNodes)
-
-        levelArray($1.id) = 1
-        set(bitMap,$1.id,1)
-        
-        //error: illegal sharing of mutable objects Sym(2472 at Sym(2473)=Reflect(NewVar(Sym(2472)),Summary(false,false,false,false,true,false,List(Sym(2472)),List(Sym(2472)),List(),List()),List(Sym(2472)))
-        //var finished = AtomicBoolean(false)
-        var finished = false
-
-        var level = 1
- 
-        while(!finished){//!getAndSet(finished,true)){
-          finished = true
-          nodes.foreach{n =>  
-            if(levelArray(n) == level){
-              val neighbor = $self.outNeighbors(Node(n))
-              neighbor.foreach{nghbr =>
-                if(testAtomic(bitMap,nghbr,0)){
-                  if(testAndSetAtomic(bitMap,nghbr,0,1)){
-                    levelArray(nghbr) = level+1
-                    finished = false//set(finished,false)
-              }}}//end nghbr for each 
-              forwardComp(n) = $2(Node(n),forwardComp,levelArray)
-            }
-          }//end nodes for each
-          level += 1
-        }//end while
-
-        val rBFS = true
-        ///reverse BFS
-        while( level>=1 ){
-          nodes.foreach{n =>
-            if(levelArray(n) == level){
-              reverseComp(n) = $3(Node(n),forwardComp,reverseComp,levelArray)
-            }
-          }
-          level -= 1
-        }
-        NodeData(reverseComp.getRawArrayBuffer)
+      infix ("getExternalID") (Node :: MInt) implements single {
+        val self = quotedArg("self")
+        val arg1 = quotedArg(1)
+        s"""array_apply($self.getExternalIDs,$arg1.id)"""
       }
+      //perform BF traversal
+      infix ("inBFOrder") ( CurriedMethodSignature(List(Node,((Node,NodeData(R),NodeData(MInt)) ==> R),((Node,NodeData(R),NodeData(R),NodeData(MInt)) ==> R)),NodeData(R)), TFractional(R), addTpePars=R, effect=simple) implements composite {
+          val self = quotedArg("self")
+          val arg1 = quotedArg(1)
+          val arg2 = quotedArg(2)
+          val arg3 = quotedArg(3)
+          s"""val levelArray = NodeData[Int]($self.numNodes)
+val bitMap = AtomicIntArray($self.numNodes)
+val nodes = NodeIdView($self.numNodes) 
+val forwardComp = NodeData[R]($self.numNodes)
+val reverseComp = NodeData[R]($self.numNodes)
+
+levelArray($arg1.id) = 1
+set(bitMap,$arg1.id,1)
+
+
+
+var finished = false
+
+var level = 1
+ 
+while(!finished){
+  finished = true
+  nodes.foreach{n =>  
+    if(levelArray(n) == level){
+      val neighbor = $self.outNeighbors(Node(n))
+      neighbor.foreach{nghbr =>
+if(testAtomic(bitMap,nghbr,0)){
+  if(testAndSetAtomic(bitMap,nghbr,0,1)){
+    levelArray(nghbr) = level+1
+    finished = false
+      }}}
+      forwardComp(n) = $arg2(Node(n),forwardComp,levelArray)
+    }
+  }
+  level += 1
+}
+
+val rBFS = true
+
+while( level>=1 ){
+  nodes.foreach{n =>
+    if(levelArray(n) == level){
+      reverseComp(n) = $arg3(Node(n),forwardComp,reverseComp,levelArray)
+    }
+  }
+  level -= 1
+}
+NodeData(reverseComp.getRawArrayBuffer)"""
+        }
     }
   }
   //have to split this up from 
@@ -115,46 +132,64 @@ trait GraphOps{
     val R = tpePar("R")
     val Graph = tpePar("Graph")
     //math_object_abs only works for a type of Double
-    direct(Graph) ("abs", Nil, MDouble :: MDouble) implements single ${math_object_abs($0)}
-    direct(Graph) ("abs", Nil, NodeData(MDouble) :: NodeData(MDouble)) implements composite ${$0.map(e => math_object_abs(e))}
-    direct(Graph) ("abs", Nil, MFloat :: MFloat) implements single ${if($0 > 0) $0 else $0 * -1}
-    direct(Graph) ("abs", Nil, NodeData(MFloat) :: NodeData(MFloat)) implements composite ${$0.map(e => abs(e))}
+    direct(Graph) ("abs", Nil, MDouble :: MDouble) implements single {
+      val arg1 = quotedArg(0)
+      s"""math_object_abs($arg1)"""
+    }
+    direct(Graph) ("abs", Nil, NodeData(MDouble) :: NodeData(MDouble)) implements composite {
+      val arg1 = quotedArg(0)
+      s"""$arg1.map(e => math_object_abs(e))"""
+    }
+    direct(Graph) ("abs", Nil, MFloat :: MFloat) implements single {
+      val arg1 = quotedArg(0)
+      s"""if($arg1 > 0) $arg1 else $arg1 * -1"""
+    }
+    direct(Graph) ("abs", Nil, NodeData(MFloat) :: NodeData(MFloat)) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1.map(e => abs(e))"""
+}
 
     //a couple of sum methods, with condition provided
-    direct(Graph) ("sumOverNeighborsC", R, CurriedMethodSignature(List(("nd_view",NeighborView(MInt)), ("data",Node==>R) ,("cond",Node==>MBoolean,"n=>unit(true)")),R), TNumeric(R)) implements composite ${
-      nd_view.mapreduce[R]({n => data(Node(n))},{(a,b) => a+b},n=>cond(Node(n)))
-    }
-    direct(Graph) ("sumOverNodesC", R, CurriedMethodSignature(List(("nodes",NodeIdView), ("data",Node==>R) ,("cond",Node==>MBoolean,"n=>unit(true)")),R), TNumeric(R)) implements composite ${
-      nodes.mapreduce[R]({n => data(Node(n))},{(a,b) => a+b},n=>cond(Node(n)))
-    }
-    direct(Graph) ("sumOverNeighbors", R, CurriedMethodSignature(List(("nd_view",NeighborView(MInt)), ("data",Node==>R)),R), TNumeric(R)) implements composite ${
-      nd_view.mapreduce[R]({n => data(Node(n))},{(a,b) => a+b}, {n => true})
-    }
-    direct(Graph) ("sumOverNodes", R, CurriedMethodSignature(List(("nodes",NodeIdView), ("data",Node==>R)),R), TNumeric(R)) implements composite ${
-      nodes.mapreduce[R]({n => data(Node(n))},{(a,b) => a+b},{n => true})
-    }
+    direct(Graph) ("sumOverNeighborsC", R, CurriedMethodSignature(List(("nd_view",NeighborView(MInt)), ("data",Node==>R) ,("cond",Node==>MBoolean,"n=>unit(true)")),R), TNumeric(R)) implements composite {
+        s"""nd_view.mapreduce[R]({n => data(Node(n))},{(a,b) => a+b},n=>cond(Node(n)))"""
+      }
+    direct(Graph) ("sumOverNodesC", R, CurriedMethodSignature(List(("nodes",NodeIdView), ("data",Node==>R) ,("cond",Node==>MBoolean,"n=>unit(true)")),R), TNumeric(R)) implements composite {
+        s"""nodes.mapreduce[R]({n => data(Node(n))},{(a,b) => a+b},n=>cond(Node(n)))"""
+      }
+    direct(Graph) ("sumOverNeighbors", R, CurriedMethodSignature(List(("nd_view",NeighborView(MInt)), ("data",Node==>R)),R), TNumeric(R)) implements composite {
+        s"""nd_view.mapreduce[R]({n => data(Node(n))},{(a,b) => a+b}, {n => true})"""
+      }
+    direct(Graph) ("sumOverNodes", R, CurriedMethodSignature(List(("nodes",NodeIdView), ("data",Node==>R)),R), TNumeric(R)) implements composite {
+        s"""nodes.mapreduce[R]({n => data(Node(n))},{(a,b) => a+b},{n => true})"""
+      }
 
-    direct(Graph) ("sum", R, NodeData(R) :: R, TNumeric(R)) implements composite ${$0.reduce((a,b) => a+b)}
-    direct(Graph) ("sum", R, NodeData(NodeData(R)) :: NodeData(R), TFractional(R)) implements composite ${$0.reduceNested( ((a,b) => a+b),NodeData[R]($0.length))}
+    direct(Graph) ("sum", R, NodeData(R) :: R, TNumeric(R)) implements composite {
+      val arg1 = quotedArg(0)
+      s"""$arg1.reduce((a,b) => a+b)"""
+    }
+    direct(Graph) ("sum", R, NodeData(NodeData(R)) :: NodeData(R), TFractional(R)) implements composite {
+  val arg1 = quotedArg(0)
+  s"""$arg1.reduceNested( ((a,b) => a+b),NodeData[R]($arg1.length))"""
+}
 
     // "block" should not mutate the input, but always produce a new copy. in this version, block can change the structure of the input across iterations (e.g. increase its size)
-    direct (Graph) ("untilconverged", T, CurriedMethodSignature(List(List(("x", T), ("tol", MDouble, "unit(.0001)"), ("minIter", MInt, "unit(1)"), ("maxIter", MInt, "unit(100)")), ("block", T ==> T), ("diff", (T,T) ==> MDouble)), T)) implements composite ${
-      var delta = scala.Double.MaxValue
-      var cur = x
-      var iter = 0
+    direct (Graph) ("untilconverged", T, CurriedMethodSignature(List(List(("x", T), ("tol", MDouble, "unit(.0001)"), ("minIter", MInt, "unit(1)"), ("maxIter", MInt, "unit(100)")), ("block", T ==> T), ("diff", (T,T) ==> MDouble)), T)) implements composite {
+        s"""var delta = scala.Double.MaxValue
+var cur = x
+var iter = 0
 
-      while ((math_object_abs(delta) > tol && iter < maxIter) || iter < minIter) {
-        val prev = cur
-        val next = block(cur)
-        iter += 1
-        delta = diff(prev,next)
-        cur = next
+while ((math_object_abs(delta) > tol && iter < maxIter) || iter < minIter) {
+  val prev = cur
+  val next = block(cur)
+  iter += 1
+  delta = diff(prev,next)
+  cur = next
+}
+println("Number of Iterations: " + iter)
+if (iter == maxIter){
+  println("Maximum iterations exceeded")
+}
+cur"""
       }
-      println("Number of Iterations: " + iter)
-      if (iter == maxIter){
-        println("Maximum iterations exceeded")
-      }
-      cur
-    }
   } 
 }

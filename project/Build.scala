@@ -13,8 +13,8 @@ object ForgeBuild extends Build with ForgePreprocessor {
   // hook in Forge preprocessor
   val forgeSettings = Defaults.defaultSettings ++ Seq(
     organization := "stanford-ppl",
-    libraryDependencies += virtualization_lms_core,
-    sources in Compile <<= (sourceManaged in Compile, sources in Compile, streams) map { (dir,files,s) => files.map(preprocess(dir,_,s)) }
+    libraryDependencies += virtualization_lms_core //,
+    //sources in Compile <<= (sourceManaged in Compile, sources in Compile, streams) map { (dir,files,s) => files.map(preprocess(dir,_,s)) }
   )
 
   lazy val forge = Project("Forge", file("."), settings = forgeSettings)

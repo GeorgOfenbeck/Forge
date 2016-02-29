@@ -27,7 +27,10 @@ trait ClassifierOps {
     val Forest = tpe("RandomForest")
     data(Forest, ("_trees", DenseVector(Tree)))
 
-    compiler (Forest) ("alloc_forest", Nil, ("trees", DenseVector(Tree)) :: Forest) implements allocates(Forest, ${$0})
+    compiler (Forest) ("alloc_forest", Nil, ("trees", DenseVector(Tree)) :: Forest) implements allocates(Forest, {
+  val arg1 = quotedArg(0)
+  s"""$arg1"""
+})
 
     // For each tree, we default to using approximately 2/3rds of the total available samples
     // http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#remarks
@@ -40,9 +43,8 @@ trait ClassifierOps {
         ("minSamplesSplit", MInt, "unit(2)"),
         ("minSamplesLeaf", MInt, "unit(1)"),
         ("verbose", MBoolean, "unit(false)")
-      ), Forest)) implements composite ${
-
-      val y = trainingSet.labels map { label => if (label) 1.0 else 0.0 }
+      ), Forest)) implements composite {
+  s"""val y = trainingSet.labels map { label => if (label) 1.0 else 0.0 }
       val data = DenseTrainingSet(trainingSet.data, y)
 
       if (verbose) {
@@ -58,22 +60,23 @@ trait ClassifierOps {
         println("Random forest complete! training took " + (end-start) / 1000.0 + "s")
       }
 
-      alloc_forest(trees)
-    }
+      alloc_forest(trees)"""
+}
 
     val ForestOps = withTpe(Forest)
     ForestOps {
       infix ("trees") (Nil :: DenseVector(Tree)) implements getter(0, "_trees")
 
-      infix ("predict") (("testPt", DenseVector(MDouble)) :: MDouble) implements composite ${
-        fassert($self.trees.length > 0, "random forest is empty")
+      infix ("predict") (("testPt", DenseVector(MDouble)) :: MDouble) implements composite {
+          val self = quotedArg("self")
+          s"""fassert($self.trees.length > 0, "random forest is empty")
 
-        // Take majority vote
-        val predictions = $self.trees.map(t => t.predict(testPt))
-        val counts = predictions.histogram
-        val majorityIndex = counts.toVector.maxIndex
-        counts.keys.apply(majorityIndex)
-      }
+
+val predictions = $self.trees.map(t => t.predict(testPt))
+val counts = predictions.histogram
+val majorityIndex = counts.toVector.maxIndex
+counts.keys.apply(majorityIndex)"""
+        }
     }
 
     /**
@@ -87,15 +90,14 @@ trait ClassifierOps {
         ("lambda", MDouble, "unit(0.0)"),
         ("verbose", MBoolean, "unit(false)"),
         ("callback", (DenseVector(MDouble), MInt) ==> MUnit, "(m,i) => unit(())")
-      ), DenseVector(MDouble)), ("_ts", TTrainingSetLike(MDouble,MBoolean,TS(MDouble,MBoolean)))) implements composite ${
-
-      val theta = DenseVector.zeros(data.numFeatures)
+      ), DenseVector(MDouble)), ("_ts", TTrainingSetLike(MDouble,MBoolean,TS(MDouble,MBoolean)))) implements composite {
+  s"""val theta = DenseVector.zeros(data.numFeatures)
       val y = data.labels map { label => if (label) 1.0 else 0.0 }
 
       val _maxIter = maxIter
       val _verbose = verbose
 
-      // gradient descent with logistic function
+      
       if (stochastic) {
         untilconverged(theta, maxIter = _maxIter, verbose = _verbose) { (cur, iter) =>
           val alpha = initLearningRate / (1.0 + initLearningRate*iter)
@@ -111,8 +113,8 @@ trait ClassifierOps {
       }
       else {
         untilconverged(theta, maxIter = _maxIter, verbose = _verbose) { (cur, iter) =>
-          // the adaptive rate does not seem to work as well for batch
-          // val alpha = initLearningRate / (1.0 + initLearningRate*iter)
+          
+          
           val alpha = initLearningRate
           val gradient =
             sum(0, data.numSamples) { i =>
@@ -123,8 +125,8 @@ trait ClassifierOps {
           callback(next, iter)
           next
         }
-      }
-    }
+      }"""
+}
 
     /**
      * Logistic regression with sparse parameters. The training set must be sparse.
@@ -140,9 +142,8 @@ trait ClassifierOps {
         ("lambda", MDouble, "unit(0.0)"),
         ("verbose", MBoolean, "unit(false)"),
         ("callback", (SparseVector(MDouble), MInt) ==> MUnit, "(m,i) => unit(())")
-      ), SparseVector(MDouble))) implements composite ${
-
-      val theta = SparseVector.zeros(data.numFeatures)
+      ), SparseVector(MDouble))) implements composite {
+  s"""val theta = SparseVector.zeros(data.numFeatures)
       val y = data.labels map { label => if (label) 1.0 else 0.0 }
 
       val _maxIter = maxIter
@@ -150,7 +151,7 @@ trait ClassifierOps {
       val lastUpdated = DenseVector[Int](data.numFeatures, true)
       lastUpdated(0::lastUpdated.length) = -1
 
-      // Sparse gradient descent with logistic function
+      
       if (stochastic) {
         untilconverged(theta, maxIter = _maxIter, verbose = _verbose) { (cur, iter) =>
           val alpha = initLearningRate / (1.0 + initLearningRate*iter)
@@ -160,8 +161,8 @@ trait ClassifierOps {
             val gradient: Rep[SparseVector[Double]] =
               data(i)*(y(i) - sigmoid(data(i) *:* readVar(next)))
 
-            // Fails to compile (not found: value gradient.nnz) without explicit types
-            // and the explicit numRegularizations.toDouble call
+            
+            
             val denseUpdates: Rep[DenseVector[Double]] =
               gradient.indices.zip(gradient.nz) { (j: Rep[Int],ge: Rep[Double]) =>
                 val numRegularizations: Rep[Int] = i - lastUpdated(j)
@@ -183,7 +184,7 @@ trait ClassifierOps {
             next = next + sparseUpdates
           }
 
-          // Apply remaining batched regularization updates
+          
           val batchRegularization = next.indices.zip(next.nz) { (j,e) =>
             val numRegularizations = data.numSamples - 1 - lastUpdated(j)
             if (numRegularizations > 0)
@@ -205,25 +206,25 @@ trait ClassifierOps {
         }
       }
       else {
-        // TODO: No SparseVector arith type class yet, which is needed to sum the
-        // DenseVector of SparseVectors here
+        
+        
         fatal("Batch gradient descent is not yet supported with sparseLogreg")
 
         untilconverged(theta, maxIter = _maxIter, verbose = _verbose) { (cur, iter) =>
           val alpha = initLearningRate / (1.0 + initLearningRate*iter)
 
           val gradient = SparseVector.zeros(10)
-          // val gradient =
-          //   ((0::data.numSamples) { i =>
-          //     data(i)*(y(i) - sigmoid(data(i) *:* cur))
-          //   }).sum
+          
+          
+          
+          
 
           val next = cur + gradient*alpha - cur*lambda
           callback(next, iter)
           next
         }
-      }
-    }
+      }"""
+}
 
   }
 }

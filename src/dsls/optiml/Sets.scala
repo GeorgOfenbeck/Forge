@@ -25,7 +25,13 @@ trait SetOps {
       val VectorView = if (s == "DenseTrainingSet") DenseVectorView else SparseVectorView
 
       data(TrainingSet, ("_data", Matrix(D)), ("_labels", DenseVector(L)))
-      static (TrainingSet) ("apply", (D,L), (Matrix(D), DenseVector(L)) :: TrainingSet(D,L)) implements allocates(TrainingSet, ${$0}, ${$1})
+      static (TrainingSet) ("apply", (D,L), (Matrix(D), DenseVector(L)) :: TrainingSet(D,L)) implements allocates(TrainingSet, {
+  val arg1 = quotedArg(0)
+  s"""$arg1"""
+}, {
+  val arg1 = quotedArg(1)
+  s"""$arg1"""
+})
 
       val TrainingSetOps = withTpe(TrainingSet)
       TrainingSetOps {
@@ -44,12 +50,27 @@ trait SetOps {
         ops {
           infix ("data") (Nil :: Matrix(D)) implements getter(0, "_data")
 
-          infix ("apply") ((MInt,MInt) :: D) implements composite ${ $self.data.apply($1,$2) }
-          infix ("apply") (MInt :: VectorView(D)) implements composite ${ $self.data.apply($1) }
+          infix ("apply") ((MInt,MInt) :: D) implements composite {
+            val self = quotedArg("self")
+            val arg1 = quotedArg(1)
+            val arg2 = quotedArg(2)
+            s"""$self.data.apply($arg1,$arg2)"""
+          }
+          infix ("apply") (MInt :: VectorView(D)) implements composite {
+            val self = quotedArg("self")
+            val arg1 = quotedArg(1)
+            s"""$self.data.apply($arg1)"""
+          }
           // infix ("apply") (IndexVector :: t) implements composite ${ DenseTrainingSet($self.data.apply($1),$self.labels.apply($1)) }   // scalac typer crash...
 
-          infix ("numSamples") (Nil :: MInt) implements composite ${ $self.data.numRows }
-          infix ("numFeatures") (Nil :: MInt) implements composite ${ $self.data.numCols }
+          infix ("numSamples") (Nil :: MInt) implements composite {
+            val self = quotedArg("self")
+            s"""$self.data.numRows"""
+          }
+          infix ("numFeatures") (Nil :: MInt) implements composite {
+          val self = quotedArg("self")
+          s"""$self.data.numCols"""
+        }
         }
       }
     }
